@@ -33,6 +33,7 @@ export const ContentSection = ({ title, content, isLoading }: { title: string; c
   </div>
 );
 
+// This component is fine.
 export const ComplexitySection = ({ timeComplexity, spaceComplexity, isLoading }: { timeComplexity: string | null; spaceComplexity: string | null; isLoading: boolean; }) => (
     <div className="space-y-2">
         <h2 className="text-[13px] font-medium text-white tracking-wide">
@@ -64,17 +65,18 @@ export const ComplexitySection = ({ timeComplexity, spaceComplexity, isLoading }
 const SolutionSection = ({
   title,
   content,
-  isLoading
+  isLoading,
+  language = 'python'
 }: {
   title: string;
   content: string;
   isLoading: boolean;
+  language?: string;
 }) => {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
     if (typeof content === "string") {
-      // Clean the string before copying
       const cleanedCode = content.replace(/^(```|""")\w*\n?/, '').replace(/\n?(```|""")$/, '').trim();
       navigator.clipboard.writeText(cleanedCode).then(() => {
         setCopied(true);
@@ -108,7 +110,8 @@ const SolutionSection = ({
           </button>
           <SyntaxHighlighter
             showLineNumbers
-            language={"python"} // This could be made dynamic later
+            // CHANGE: Use the dynamic language prop.
+            language={language.toLowerCase()}
             style={dracula}
             customStyle={{
               maxWidth: "100%",
@@ -129,11 +132,9 @@ const SolutionSection = ({
 };
 
 const AnswerRenderer = ({
-  problemType,
   answer,
   isLoading
 }: {
-  problemType?: string;
   answer?: any;
   isLoading: boolean;
 }) => {
@@ -148,33 +149,22 @@ const AnswerRenderer = ({
   }
 
   if (!answer) return null;
-
-  if (problemType === 'coding') {
-    return (
-        <SolutionSection
-            title="Solution"
-            content={answer}
-            isLoading={isLoading}
-        />
-    );
-  }
   
   const questionBlocks = answer.split(/(?=###\s+Question\s+\d+)/).filter((block: string) => block.trim() !== '');
   return (
     <div className="space-y-2">
-        <h2 className="text-[13px] font-medium text-white tracking-wide">Solution</h2>
-        {questionBlocks.map((block: string, index: number) => (
-            <div key={index} className="bg-black/20 p-3 rounded-md">
-            <ReactMarkdown
-                components={{
-                h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1 text-gray-200" {...props} />,
-                p: ({node, ...props}) => <p className="text-xs text-gray-300" {...props} />,
-                }}
-            >
-                {block}
-            </ReactMarkdown>
-            </div>
-        ))}
+      {questionBlocks.map((block: string, index: number) => (
+        <div key={index} className="bg-black/20 p-3 rounded-md">
+          <ReactMarkdown
+            components={{
+              h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1 text-gray-200" {...props} />,
+              p: ({node, ...props}) => <p className="text-xs text-gray-300" {...props} />,
+            }}
+          >
+            {block}
+          </ReactMarkdown>
+        </div>
+      ))}
     </div>
   );
 };
@@ -217,6 +207,9 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
     { staleTime: Infinity, cacheTime: Infinity }
   );
   
+  const problemType = problemStatementData?.problem_type;
+  // CHANGE: Get the language from the problem statement details.
+  const language = problemStatementData?.details?.language;
   const answerData = solution?.solution?.answer;
   const reasoningData = solution?.solution?.reasoning;
   const timeComplexityData = solution?.solution?.time_complexity ?? null;
@@ -362,14 +355,25 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
                             isLoading={isSolutionLoading}
                         />
 
-                        {/* CHANGE: The conditional logic has been moved from here */}
-                        <AnswerRenderer
-                            problemType={problemStatementData?.problem_type} // Pass the latest data here
-                            answer={answerData}
-                            isLoading={isSolutionLoading}
-                        />
+                        {problemType === 'coding' ? (
+                            <SolutionSection
+                                title="Solution"
+                                content={answerData}
+                                isLoading={isSolutionLoading}
+                                // CHANGE: Pass the language prop down.
+                                language={language}
+                            />
+                        ) : (
+                            <div className="space-y-2">
+                                <h2 className="text-[13px] font-medium text-white tracking-wide">Solution</h2>
+                                <AnswerRenderer
+                                    answer={answerData}
+                                    isLoading={isSolutionLoading}
+                                />
+                            </div>
+                        )}
                         
-                        {problemStatementData?.problem_type === "coding" && (
+                        {problemType === "coding" && (
                             <ComplexitySection
                             timeComplexity={timeComplexityData}
                             spaceComplexity={spaceComplexityData}

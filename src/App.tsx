@@ -145,10 +145,8 @@ const App: React.FC = () => {
 
       window.electronAPI.onProblemExtracted((data) => {
         // This logic is still correct. It receives the problem analysis and caches it.
-        if (view === "queue") {
-          console.log("Problem extracted successfully:", data);
-          queryClient.setQueryData(["problem_statement"], data);
-        }
+        console.log("Problem extracted successfully:", data);
+        queryClient.setQueryData(["problem_statement"], data);
       }),
 
       // Other listeners are mostly unchanged but are good to keep.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, CSSProperties } from "react";
 import { useQuery, useQueryClient } from "react-query";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -22,7 +22,7 @@ export const ContentSection = ({ title, content, isLoading }: { title: string; c
     {isLoading ? (
       <div className="mt-4 flex">
         <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-          Extracting problem statement...
+          Loading...
         </p>
       </div>
     ) : (
@@ -34,79 +34,147 @@ export const ContentSection = ({ title, content, isLoading }: { title: string; c
 );
 
 export const ComplexitySection = ({ timeComplexity, spaceComplexity, isLoading }: { timeComplexity: string | null; spaceComplexity: string | null; isLoading: boolean; }) => (
-  <div className="space-y-2">
-    <h2 className="text-[13px] font-medium text-white tracking-wide">
-      Complexity
-    </h2>
-    {isLoading ? (
-      <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-        Calculating complexity...
-      </p>
-    ) : (
-      <div className="space-y-1">
-        <div className="flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100">
-          <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
-          <div>
-            <strong>Time:</strong> {timeComplexity}
-          </div>
+    <div className="space-y-2">
+        <h2 className="text-[13px] font-medium text-white tracking-wide">
+            Complexity
+        </h2>
+        {isLoading ? (
+        <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+            Calculating complexity...
+        </p>
+        ) : (
+        <div className="space-y-1">
+            <div className="flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100">
+            <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
+            <div>
+                <strong>Time:</strong> {timeComplexity}
+            </div>
+            </div>
+            <div className="flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100">
+            <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
+            <div>
+                <strong>Space:</strong> {spaceComplexity}
+            </div>
+            </div>
         </div>
-        <div className="flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100">
-          <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
-          <div>
-            <strong>Space:</strong> {spaceComplexity}
-          </div>
-        </div>
-      </div>
-    )}
-  </div>
+        )}
+    </div>
 );
 
+const SolutionSection = ({
+  title,
+  content,
+  isLoading
+}: {
+  title: string;
+  content: string;
+  isLoading: boolean;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = () => {
+    if (typeof content === "string") {
+      // Clean the string before copying
+      const cleanedCode = content.replace(/^(```|""")\w*\n?/, '').replace(/\n?(```|""")$/, '').trim();
+      navigator.clipboard.writeText(cleanedCode).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  };
+
+  const cleanedCode = typeof content === 'string' 
+    ? content.replace(/^(```|""")\w*\n?/, '').replace(/\n?(```|""")$/, '').trim()
+    : '';
+
+  return (
+    <div className="space-y-2 relative">
+      <h2 className="text-[13px] font-medium text-white tracking-wide">
+        {title}
+      </h2>
+      {isLoading ? (
+        <div className="mt-4 flex">
+            <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+                Loading solution...
+            </p>
+        </div>
+      ) : (
+        <div className="w-full relative">
+          <button
+            onClick={copyToClipboard}
+            className="absolute top-2 right-2 text-xs text-white bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition z-10"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+          <SyntaxHighlighter
+            showLineNumbers
+            language={"python"} // This could be made dynamic later
+            style={dracula}
+            customStyle={{
+              maxWidth: "100%",
+              margin: 0,
+              padding: "1rem",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+              backgroundColor: "rgba(22, 27, 34, 0.5)"
+            }}
+            wrapLongLines={true}
+          >
+            {cleanedCode}
+          </SyntaxHighlighter>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AnswerRenderer = ({
+  problemType,
   answer,
   isLoading
 }: {
-  answer?: string;
+  problemType?: string;
+  answer?: any;
   isLoading: boolean;
 }) => {
   if (isLoading) {
     return (
-      <div className="space-y-1.5">
-        <div className="mt-4 flex">
-          <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-            Loading solution...
-          </p>
-        </div>
+      <div className="mt-2 flex">
+        <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+          Loading solution...
+        </p>
       </div>
     );
   }
 
   if (!answer) return null;
 
+  if (problemType === 'coding') {
+    return (
+        <SolutionSection
+            title="Solution"
+            content={answer}
+            isLoading={isLoading}
+        />
+    );
+  }
+  
+  const questionBlocks = answer.split(/(?=###\s+Question\s+\d+)/).filter((block: string) => block.trim() !== '');
   return (
-    <div className="text-[13px] leading-[1.4] text-white">
-      <ReactMarkdown
-        components={{
-          code({ node, className, children, ref, ...props }) {
-            const match = /language-(\w+)/.exec(className || '');
-            return match ? (
-              <SyntaxHighlighter
-                style={dracula as any}
-                language={match[1]}
-                PreTag="div"
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
-            ) : (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          },
-        }}
-      >
-        {answer}
-      </ReactMarkdown>
+    <div className="space-y-2">
+        <h2 className="text-[13px] font-medium text-white tracking-wide">Solution</h2>
+        {questionBlocks.map((block: string, index: number) => (
+            <div key={index} className="bg-black/20 p-3 rounded-md">
+            <ReactMarkdown
+                components={{
+                h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1 text-gray-200" {...props} />,
+                p: ({node, ...props}) => <p className="text-xs text-gray-300" {...props} />,
+                }}
+            >
+                {block}
+            </ReactMarkdown>
+            </div>
+        ))}
     </div>
   );
 };
@@ -149,7 +217,6 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
     { staleTime: Infinity, cacheTime: Infinity }
   );
   
-  const problemType = problemStatementData?.problem_type;
   const answerData = solution?.solution?.answer;
   const reasoningData = solution?.solution?.reasoning;
   const timeComplexityData = solution?.solution?.time_complexity ?? null;
@@ -245,7 +312,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
           setIsProcessing={setDebugProcessing}
         />
       ) : (
-        <div ref={contentRef} className="relative space-y-3 px-4 py-3">
+        <div ref={contentRef} className="relative flex flex-col space-y-3 px-4 py-3">
             <Toast open={toastOpen} onOpenChange={setToastOpen} variant={toastMessage.variant} duration={3000} >
                 <ToastTitle>{toastMessage.title}</ToastTitle>
                 <ToastDescription>{toastMessage.description}</ToastDescription>
@@ -270,51 +337,48 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
           />
           
-          <div className="w-full text-sm text-black bg-black/60 rounded-md">
+          <div className="w-full text-sm bg-black/60 rounded-md">
             <div className="rounded-lg overflow-hidden">
-              <div className="px-4 py-3 space-y-4 max-w-full">
-                  <>
+                <div className="px-4 py-3 space-y-4 max-w-full">
                     <ContentSection
-                      title={"Problem Statement"}
-                      content={problemStatementData?.problem_statement}
-                      isLoading={isProblemLoading && !problemStatementData}
+                        title={"Problem Statement"}
+                        content={problemStatementData?.problem_statement}
+                        isLoading={isProblemLoading && !problemStatementData}
                     />
                     
                     {problemStatementData && !answerData && (
-                      <div className="mt-4 flex">
+                        <div className="mt-4 flex">
                         <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-                          Generating solution...
+                            Generating solution...
                         </p>
-                      </div>
+                        </div>
                     )}
                     
                     {answerData && (
-                      <>
+                        <>
                         <ContentSection
-                          title="Analysis / Reasoning"
-                          content={reasoningData}
-                          isLoading={isSolutionLoading}
+                            title="Analysis / Reasoning"
+                            content={reasoningData}
+                            isLoading={isSolutionLoading}
                         />
 
-                        <div className="space-y-2">
-                          <h2 className="text-[13px] font-medium text-white tracking-wide">Solution</h2>
-                          <AnswerRenderer
-                             answer={answerData}
-                             isLoading={isSolutionLoading}
-                          />
-                        </div>
+                        {/* CHANGE: The conditional logic has been moved from here */}
+                        <AnswerRenderer
+                            problemType={problemStatementData?.problem_type} // Pass the latest data here
+                            answer={answerData}
+                            isLoading={isSolutionLoading}
+                        />
                         
-                        {problemType === "coding" && (
-                          <ComplexitySection
+                        {problemStatementData?.problem_type === "coding" && (
+                            <ComplexitySection
                             timeComplexity={timeComplexityData}
                             spaceComplexity={spaceComplexityData}
                             isLoading={!timeComplexityData || !spaceComplexityData}
-                          />
+                            />
                         )}
-                      </>
+                        </>
                     )}
-                  </>
-              </div>
+                </div>
             </div>
           </div>
         </div>

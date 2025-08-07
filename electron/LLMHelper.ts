@@ -37,16 +37,59 @@ export class LLMHelper {
       const imageParts = await Promise.all(
         imagePaths.map((path) => this.fileToGenerativePart(path))
       );
-      const prompt = `${this.systemPrompt}\n\nAnalyze the user-provided image(s) and extract the key information into a structured JSON object. First, classify the problem, then extract the relevant details.
-        Your analysis MUST be in the following JSON format:
-        {
-          "problem_type": "Classify the problem. Use ONE of the following: 'coding', 'multiple_choice', 'q_and_a', 'general_reasoning', 'math'.",
-          "problem_statement": "A concise, one-sentence statement of the user's core task or question.",
-          "context": "Key details from the image. For 'coding', this includes language, frameworks, variables, and error messages. For 'q_and_a', it's the background information. For 'multiple_choice', it's the question stem.",
-          "options": "For 'multiple_choice' problems, provide an array of the available options (e.g., ['A', 'B', 'C', 'D']). For other types, this can be an empty array []."
-        }
 
-        Important: Return ONLY the raw JSON object, without any markdown formatting, code blocks, or extraneous text.`;
+      // This prompt is now a powerful, multi-purpose extractor.
+      const prompt = `${this.systemPrompt}\n\nAnalyze the user-provided image(s) and perform two steps:
+1.  **Classify the Problem**: Determine the type of problem. It must be one of: 'coding', 'multiple_choice', 'q_and_a', 'general_reasoning', 'math'.
+2.  **Extract Details**: Based on the classification, extract the relevant information into the correct JSON structure.
+
+Your final output MUST be a single JSON object formatted according to the examples below.
+
+**JSON FORMAT EXAMPLES:**
+
+* **For 'coding'**:
+    \`\`\`json
+    {
+      "problem_type": "coding",
+      "problem_statement": "A summary of the coding task or error.",
+      "details": {
+        "language": "e.g., Python, JavaScript",
+        "code_snippet": "The main block of code.",
+        "error_message": "Any error message shown, if applicable."
+      }
+    }
+    \`\`\`
+
+* **For 'multiple_choice'**:
+    \`\`\`json
+    {
+      "problem_type": "multiple_choice",
+      "problem_statement": "A summary of the quiz topic.",
+      "details": {
+        "questions": [
+          {
+            "question_text": "The full text of the first question.",
+            "options": ["Option A", "Option B"]
+          }
+        ]
+      }
+    }
+    \`\`\`
+
+* **For 'q_and_a' or 'math'**:
+    \`\`\`json
+    {
+      "problem_type": "q_and_a",
+      "problem_statement": "The user's primary question.",
+      "details": {
+        "question": "The full text of the question.",
+        "context": "Any surrounding text or data needed to answer."
+      }
+    }
+    \`\`\`
+
+Important: Return ONLY the raw JSON object, without any markdown formatting, code blocks, or extraneous text.`;
+
       const result = await this.model.generateContent([prompt, ...imageParts]);
       const response = result.response;
       const text = this.cleanJsonResponse(response.text());
@@ -59,27 +102,33 @@ export class LLMHelper {
   public async generateSolution(problemInfo: any) {
     const prompt = `${
       this.systemPrompt
-    }\n\nGiven the following problem analysis:
-      ${JSON.stringify(problemInfo, null, 2)}
+    }\n\nBased on the following classified problem, generate a helpful solution.
+The problem type is: **${problemInfo.problem_type}**
 
-      Your task is to generate a complete solution. The format of your response MUST be a JSON object and should be tailored to the 'problem_type'.
+**Problem Details:**
+${JSON.stringify(problemInfo, null, 2)}
 
-      **Instructions based on 'problem_type'**:
-      - If 'problem_type' is 'coding': The 'answer' field should contain only the complete, functional code. The 'reasoning' should explain the logic, algorithms, and syntax choices.
-      - If 'problem_type' is 'multiple_choice': The 'answer' field should contain ONLY the letter of the correct option (e.g., "C"). The 'reasoning' must explain why this option is correct AND why the other options are incorrect.
-      - If 'problem_type' is 'q_and_a' or 'math': The 'answer' field should contain the direct answer, calculation, or written response. The 'reasoning' should show the steps, logic, or evidence used.
-      - If 'problem_type' is 'general_reasoning': The 'answer' field should contain your conclusion or interpretation. The 'reasoning' should explain how you arrived at it based on the context.
+**Instructions for Your Response:**
+Your response MUST be a valid JSON object.
 
-      Please provide your response in the following JSON format:
-      {
-        "solution": {
-          "answer": "The final code, multiple-choice letter, or text answer, based on the instructions above.",
-          "reasoning": "A detailed explanation for your answer, tailored to the problem type.",
-          "suggested_next_steps": ["A relevant follow-up action the user could take.", "Another possible action."]
-        }
-      }
+-   If the problem_type is **'coding'**, the "answer" field should contain ONLY the raw code as a single-line JSON string. You must also provide the 'time_complexity' and 'space_complexity' in Big O notation.
+-   If the problem_type is **'multiple_choice'**, the "answer" string should be a Markdown-formatted string. For each question, use a heading (e.g., '### Question 1'), and then on new lines, use the format: "**Correct Answer:** [The Answer]" and "**Justification:** [The Explanation]".
+-   If the problem_type is **'q_and_a'** or **'math'**, the "answer" string should be a clear, well-formatted textual explanation.
 
-      Important: Return ONLY the raw JSON object, without any markdown formatting or code blocks.`;
+**CRITICAL RULE: All double quotes (") inside JSON string values MUST be escaped with a backslash (\\"). All newlines inside a string value must be escaped as \\n.**
+
+**JSON Response Format:**
+{
+  "solution": {
+    "answer": "The solution content, following the rules above.",
+    "reasoning": "A high-level, one-sentence summary of the overall approach taken.",
+    "time_complexity": "For 'coding' problems, the Big O time complexity (e.g., 'O(n)'). For others, null.",
+    "space_complexity": "For 'coding' problems, the Big O space complexity (e.g., 'O(1)'). For others, null.",
+    "suggested_next_steps": ["A relevant follow-up action.", "Another possible action."]
+  }
+}
+
+Important: Return ONLY the raw JSON object, without any markdown formatting or code blocks.`;
 
     console.log("[LLMHelper] Calling Gemini LLM for solution...");
     try {
@@ -89,12 +138,20 @@ export class LLMHelper {
       const text = this.cleanJsonResponse(response.text());
       const parsed = JSON.parse(text);
       console.log("[LLMHelper] Parsed LLM response:", parsed);
+
+      if (problemInfo.problem_type === "coding" && parsed.solution?.answer) {
+        const language =
+          problemInfo.details?.language?.toLowerCase() || "python";
+        parsed.solution.answer = `\`\`\`${language}\n${parsed.solution.answer}\n\`\`\``;
+      }
+
       return parsed;
     } catch (error) {
       console.error("[LLMHelper] Error in generateSolution:", error);
       throw error;
     }
   }
+
   public async debugSolutionWithImages(
     problemInfo: any,
     currentCode: string,

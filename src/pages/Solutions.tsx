@@ -1,58 +1,51 @@
-import React, { useState, useEffect, useRef, CSSProperties } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "react-query";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ReactMarkdown from "react-markdown";
-
-import ScreenshotQueue from "../components/Queue/ScreenshotQueue";
-import {
-  Toast,
-  ToastDescription,
-  ToastMessage,
-  ToastTitle,
-  ToastVariant
-} from "../components/ui/toast";
+import ScreenshotQueue from "../components/features/Queue/ScreenshotQueue";
+import { Toast,ToastDescription,ToastMessage,ToastTitle,ToastVariant } from "../components/ui";
 import { NewProblemStatementData, NewSolutionData } from "../../common/types/solutions"; 
-import SolutionCommands from "../components/Solutions/SolutionCommands";
+import SolutionCommands from "../components/features/Solutions/SolutionCommands";
+import { Theme, useTheme } from '../contexts/ThemeContext';
 import Debug from "./Debug";
 
-export const ContentSection = ({ title, content, isLoading }: { title: string; content: React.ReactNode; isLoading: boolean; }) => (
+export const ContentSection = ({ title, content, isLoading, theme }: { title: string; content: React.ReactNode; isLoading: boolean; theme: Theme; }) => (
   <div className="space-y-2">
-    <h2 className="text-[13px] font-medium text-white tracking-wide">{title}</h2>
+    <h2 className={theme === 'osrs' ? 'osrs-header' : 'text-[13px] font-medium text-white tracking-wide'}>{title}</h2>
     {isLoading ? (
       <div className="mt-4 flex">
-        <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+        <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
           Loading...
         </p>
       </div>
     ) : (
-      <div className="text-[13px] leading-[1.4] text-gray-100 max-w-[600px]">
+      <div className={theme === 'osrs' ? 'osrs-content' : 'text-[13px] leading-[1.4] text-gray-100 max-w-[600px]'}>
         {content}
       </div>
     )}
   </div>
 );
 
-// This component is fine.
-export const ComplexitySection = ({ timeComplexity, spaceComplexity, isLoading }: { timeComplexity: string | null; spaceComplexity: string | null; isLoading: boolean; }) => (
+export const ComplexitySection = ({ timeComplexity, spaceComplexity, isLoading, theme }: { timeComplexity: string | null; spaceComplexity: string | null; isLoading: boolean; theme: Theme; }) => (
     <div className="space-y-2">
-        <h2 className="text-[13px] font-medium text-white tracking-wide">
+        <h2 className={theme === 'osrs' ? 'osrs-header' : 'text-[13px] font-medium text-white tracking-wide'}>
             Complexity
         </h2>
         {isLoading ? (
-        <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+        <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
             Calculating complexity...
         </p>
         ) : (
-        <div className="space-y-1">
-            <div className="flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100">
-            <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
+        <div className={theme === 'osrs' ? 'osrs-content space-y-1' : 'space-y-1'}>
+            <div className={theme === 'osrs' ? '' : 'flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100'}>
+            {theme === 'default' && <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />}
             <div>
                 <strong>Time:</strong> {timeComplexity}
             </div>
             </div>
-            <div className="flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100">
-            <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
+            <div className={theme === 'osrs' ? '' : 'flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100'}>
+            {theme === 'default' && <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />}
             <div>
                 <strong>Space:</strong> {spaceComplexity}
             </div>
@@ -66,12 +59,14 @@ const SolutionSection = ({
   title,
   content,
   isLoading,
-  language = 'python'
+  language = 'python',
+  theme
 }: {
   title: string;
   content: string;
   isLoading: boolean;
   language?: string;
+  theme: Theme;
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -91,12 +86,12 @@ const SolutionSection = ({
 
   return (
     <div className="space-y-2 relative">
-      <h2 className="text-[13px] font-medium text-white tracking-wide">
+      <h2 className={theme === 'osrs' ? 'osrs-header' : 'text-[13px] font-medium text-white tracking-wide'}>
         {title}
       </h2>
       {isLoading ? (
         <div className="mt-4 flex">
-            <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+            <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
                 Loading solution...
             </p>
         </div>
@@ -110,7 +105,6 @@ const SolutionSection = ({
           </button>
           <SyntaxHighlighter
             showLineNumbers
-            // CHANGE: Use the dynamic language prop.
             language={language.toLowerCase()}
             style={dracula}
             customStyle={{
@@ -119,7 +113,7 @@ const SolutionSection = ({
               padding: "1rem",
               whiteSpace: "pre-wrap",
               wordBreak: "break-all",
-              backgroundColor: "rgba(22, 27, 34, 0.5)"
+              backgroundColor: theme === 'osrs' ? 'rgba(0,0,0,0.8)' : "rgba(22, 27, 34, 0.5)"
             }}
             wrapLongLines={true}
           >
@@ -133,15 +127,17 @@ const SolutionSection = ({
 
 const AnswerRenderer = ({
   answer,
-  isLoading
+  isLoading,
+  theme
 }: {
   answer?: any;
   isLoading: boolean;
+  theme: Theme;
 }) => {
   if (isLoading) {
     return (
       <div className="mt-2 flex">
-        <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+        <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
           Loading solution...
         </p>
       </div>
@@ -154,11 +150,11 @@ const AnswerRenderer = ({
   return (
     <div className="space-y-2">
       {questionBlocks.map((block: string, index: number) => (
-        <div key={index} className="bg-black/20 p-3 rounded-md">
+        <div key={index} className={theme === 'osrs' ? 'osrs-mcq-block' : 'bg-black/20 p-3 rounded-md'}>
           <ReactMarkdown
             components={{
-              h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1 text-gray-200" {...props} />,
-              p: ({node, ...props}) => <p className="text-xs text-gray-300" {...props} />,
+              h3: ({node, ...props}) => <h3 className={theme === 'osrs' ? '' : 'text-sm font-semibold mb-1 text-gray-200'} {...props} />,
+              p: ({node, ...props}) => <p className={theme === 'osrs' ? '' : 'text-xs text-gray-300'} {...props} />,
             }}
           >
             {block}
@@ -175,19 +171,16 @@ interface SolutionsProps {
 }
 
 const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
+  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
 
   const { data: problemStatementData, isLoading: isProblemLoading } = useQuery<NewProblemStatementData | null>(
-    ["problem_statement"],
-    () => Promise.resolve(null),
-    { staleTime: Infinity, enabled: false }
+    ["problem_statement"]
   );
   
   const { data: solution, isLoading: isSolutionLoading } = useQuery<NewSolutionData | null>(
-    ["solution"],
-    () => Promise.resolve(null),
-    { staleTime: Infinity, enabled: false }
+    ["solution"]
   );
 
   const { data: extraScreenshots = [], refetch: refetchScreenshots } = useQuery<
@@ -203,12 +196,10 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         console.error("Error loading extra screenshots:", error);
         return [];
       }
-    },
-    { staleTime: Infinity, cacheTime: Infinity }
+    }
   );
   
   const problemType = problemStatementData?.problem_type;
-  // CHANGE: Get the language from the problem statement details.
   const language = problemStatementData?.details?.language;
   const answerData = solution?.solution?.answer;
   const reasoningData = solution?.solution?.reasoning;
@@ -330,18 +321,19 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
           />
           
-          <div className="w-full text-sm bg-black/60 rounded-md">
+          <div className={theme === 'osrs' ? "w-full text-sm osrs-container rounded-md" : "w-full text-sm bg-black/60 rounded-md"}>
             <div className="rounded-lg overflow-hidden">
                 <div className="px-4 py-3 space-y-4 max-w-full">
                     <ContentSection
                         title={"Problem Statement"}
                         content={problemStatementData?.problem_statement}
-                        isLoading={isProblemLoading && !problemStatementData}
+                        isLoading={isProblemLoading || !problemStatementData}
+                        theme={theme}
                     />
                     
                     {problemStatementData && !answerData && (
                         <div className="mt-4 flex">
-                        <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+                        <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
                             Generating solution...
                         </p>
                         </div>
@@ -353,6 +345,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
                             title="Analysis / Reasoning"
                             content={reasoningData}
                             isLoading={isSolutionLoading}
+                            theme={theme}
                         />
 
                         {problemType === 'coding' ? (
@@ -360,15 +353,16 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
                                 title="Solution"
                                 content={answerData}
                                 isLoading={isSolutionLoading}
-                                // CHANGE: Pass the language prop down.
                                 language={language}
+                                theme={theme}
                             />
                         ) : (
                             <div className="space-y-2">
-                                <h2 className="text-[13px] font-medium text-white tracking-wide">Solution</h2>
+                                <h2 className={theme === 'osrs' ? 'osrs-header' : 'text-[13px] font-medium text-white tracking-wide'}>Solution</h2>
                                 <AnswerRenderer
                                     answer={answerData}
                                     isLoading={isSolutionLoading}
+                                    theme={theme}
                                 />
                             </div>
                         )}
@@ -377,7 +371,8 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
                             <ComplexitySection
                             timeComplexity={timeComplexityData}
                             spaceComplexity={spaceComplexityData}
-                            isLoading={!timeComplexityData || !spaceComplexityData}
+                            isLoading={isSolutionLoading || !timeComplexityData || !spaceComplexityData}
+                            theme={theme}
                             />
                         )}
                         </>

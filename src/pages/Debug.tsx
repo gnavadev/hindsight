@@ -4,16 +4,17 @@ import { useQuery, useQueryClient } from "react-query"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { ComplexitySection, ContentSection } from "./Solutions"
-import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
+import ScreenshotQueue from "../components/features/Queue/ScreenshotQueue"
 import {
   Toast,
   ToastDescription,
   ToastMessage,
   ToastTitle,
   ToastVariant
-} from "../components/ui/toast"
-import ExtraScreenshotsQueueHelper from "../components/Solutions/SolutionCommands"
+} from "../components/ui/Toast"
+import ExtraScreenshotsQueueHelper from "../components/features/Solutions/SolutionCommands"
 import { diffLines } from "diff"
+import { useTheme } from "../contexts/ThemeContext"
 
 type DiffLine = {
   value: string
@@ -202,6 +203,7 @@ interface DebugProps {
 }
 
 const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
+  const { theme } = useTheme()
   const queryClient = useQueryClient()
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -377,6 +379,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
           <div className="px-4 py-3 space-y-4">
             {/* Thoughts Section */}
             <ContentSection
+              theme={theme}
               title="What I Changed"
               content={
                 thoughtsData && (
@@ -407,6 +410,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
               timeComplexity={timeComplexityData}
               spaceComplexity={spaceComplexityData}
               isLoading={!timeComplexityData || !spaceComplexityData}
+              theme={theme}
             />
           </div>
         </div>
@@ -416,3 +420,4 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
 }
 
 export default Debug
+

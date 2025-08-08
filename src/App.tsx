@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { QueryClient, QueryClientProvider } from "react-query";
-import { ToastProvider } from "./components/ui/toast";
+import { ToastProvider } from "./components/ui/Toast";
 import { ToastViewport } from "@radix-ui/react-toast";
-import Queue from "./_pages/Queue";
-import Solutions from "./_pages/Solutions";
+import Queue from "./pages/Queue";
+import Solutions from "./pages/Solutions";
 import { NewProblemStatementData, NewSolutionData } from "../common/types/solutions"; // CHANGE: Import the new types
 
 declare global {

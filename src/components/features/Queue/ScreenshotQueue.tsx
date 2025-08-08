@@ -1,5 +1,5 @@
 import React from "react"
-import ScreenshotItem from "./ScreenshotItem"
+import { ScreenshotItem } from "../../layout"
 
 interface Screenshot {
   path: string

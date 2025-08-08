@@ -12,6 +12,7 @@ export class LLMHelper {
   constructor(apiKey: string) {
     const genAI = new GoogleGenerativeAI(apiKey);
     this.model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // this.model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
   }
 
   private async fileToGenerativePart(imagePath: string) {
@@ -130,24 +131,31 @@ Your response MUST be a valid JSON object.
 
 Important: Return ONLY the raw JSON object, without any markdown formatting or code blocks.`;
 
+    let result: any;
     console.log("[LLMHelper] Calling Gemini LLM for solution...");
     try {
-      const result = await this.model.generateContent(prompt);
-      console.log("[LLMHelper] Gemini LLM returned result.");
+      result = await this.model.generateContent(prompt);
       const response = result.response;
+      
       const text = this.cleanJsonResponse(response.text());
+
+      if (!text) {
+        console.error("[LLMHelper] The API response did not contain a valid JSON object.");
+        throw new Error("The API response was empty or malformed.");
+      }
       const parsed = JSON.parse(text);
       console.log("[LLMHelper] Parsed LLM response:", parsed);
 
-      if (problemInfo.problem_type === "coding" && parsed.solution?.answer) {
-        const language =
-          problemInfo.details?.language?.toLowerCase() || "python";
+      if (problemInfo.problem_type === 'coding' && parsed.solution?.answer) {
+        const language = problemInfo.details?.language?.toLowerCase() || 'python';
         parsed.solution.answer = `\`\`\`${language}\n${parsed.solution.answer}\n\`\`\``;
       }
-
       return parsed;
     } catch (error) {
       console.error("[LLMHelper] Error in generateSolution:", error);
+      if (result && result.response) {
+          console.error("[LLMHelper] Raw text that failed to parse:", result.response.text());
+      }
       throw error;
     }
   }

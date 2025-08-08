@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from "react"
 import { useQuery } from "react-query"
-import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
+import ScreenshotQueue from "../components/features/Queue/ScreenshotQueue"
 import {
   Toast,
   ToastTitle,
   ToastDescription,
   ToastVariant,
   ToastMessage
-} from "../components/ui/toast"
-import QueueCommands from "../components/Queue/QueueCommands"
+} from "../components/ui/Toast"
+import QueueCommands from "../components/features/Queue/QueueCommands"
 
 interface QueueProps {
   setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>

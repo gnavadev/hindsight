@@ -21,7 +21,7 @@ const ScreenshotItem: React.FC<ScreenshotItemProps> = ({
   isLoading
 }) => {
   const handleDelete = async () => {
-    await onDelete(index)
+    onDelete(index)
   }
 
   return (

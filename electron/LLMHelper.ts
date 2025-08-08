@@ -3,7 +3,7 @@ import fs from "fs";
 
 export class LLMHelper {
   private model: GenerativeModel;
-  private readonly systemPrompt = `You are Wingman AI, a helpful and proactive assistant. Your specialty is analyzing images to identify and solve a wide range of problems, including:
+  private readonly systemPrompt = `You are Hindsight AI, a helpful and proactive assistant. Your specialty is analyzing images to identify and solve a wide range of problems, including:
   - **Coding & Debugging Tasks**: Analyzing screenshots of code, error messages, or IDEs.
   - **Academic Questions**: Solving multiple-choice, short answer, or essay questions from subjects like math, science, history, etc.
   - **General Reasoning**: Interpreting diagrams, charts, or general situations.
@@ -171,7 +171,7 @@ Important: Return ONLY the raw JSON object, without any markdown formatting or c
       );
       const prompt = `${
         this.systemPrompt
-      }\n\nYou are a wingman. Given:\n1. The original problem or situation: ${JSON.stringify(
+      }\n\nYou are Hindsight AI. Given:\n1. The original problem or situation: ${JSON.stringify(
         problemInfo,
         null,
         2

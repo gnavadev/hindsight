@@ -13,6 +13,11 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   )
 
+  // ipcMain.on('set-api-key', (event, apiKey: string) => {
+  //   console.log(`Received API key from UI: ${apiKey}`);
+  //   appState.processingHelper.setApiKey(apiKey);
+  // });
+
   ipcMain.handle("delete-screenshot", async (event, path: string) => {
     return appState.deleteScreenshot(path)
   })

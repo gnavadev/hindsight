@@ -1,4 +1,4 @@
-export const OSRSStyle = () => (
+const OsrsTheme = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=RuneScape+UF&display=swap');
 
@@ -49,3 +49,5 @@ export const OSRSStyle = () => (
     }
   `}</style>
 );
+
+export default OsrsTheme;

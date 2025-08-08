@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { OSRSStyle } from '../themes/OsrsTheme';
+import { OsrsTheme } from '../themes';
 
 export type Theme = 'default' | 'osrs';
 
@@ -21,7 +21,7 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({ children 
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {theme === 'osrs' && <OSRSStyle />}
+      {theme === 'osrs' && <OsrsTheme />}
       {children}
     </ThemeContext.Provider>
   );

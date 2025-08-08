@@ -1,9 +1,8 @@
 import { AppState } from "./main";
 import { LLMHelper } from "./LLMHelper";
-import dotenv from "dotenv";
-
-// This line will load the variables from your .env file
-dotenv.config();
+// We no longer need dotenv for this temporary fix
+// import dotenv from "dotenv";
+// dotenv.config();
 
 export class ProcessingHelper {
   private appState: AppState;
@@ -13,19 +12,20 @@ export class ProcessingHelper {
 
   constructor(appState: AppState) {
     this.appState = appState;
-    const apiKey = process.env.GEMINI_API_KEY;
+    
+    // --- TEMPORARY FIX FOR TESTING ---
+    // Hardcode your API key here.
+    // WARNING: This is insecure. Do not use this in a real application.
+    const apiKey = "";
 
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY not found in environment variables");
+      // This will still cause a crash, reminding you to add the key.
+      throw new Error("GEMINI_API_KEY has not been hardcoded for this test build.");
     }
     
     this.llmHelper = new LLMHelper(apiKey);
   }
 
-  /**
-   * This method is no longer needed when using the .env file directly,
-   * but I will leave it here for future changes on packaging.
-   */
   public setApiKey(apiKey: string): void {
     if (apiKey && typeof apiKey === 'string') {
         this.llmHelper = new LLMHelper(apiKey);

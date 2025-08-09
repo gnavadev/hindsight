@@ -1,12 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface SolutionTooltipHelpProps {
   onTooltipVisibilityChange?: (visible: boolean, height: number) => void;
 }
 
 const SolutionTooltipHelp: React.FC<SolutionTooltipHelpProps> = ({ onTooltipVisibilityChange }) => {
+  const { theme } = useTheme();
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const containerClasses = theme === 'osrs'
+    ? "p-3 text-xs osrs-container rounded-lg shadow-lg"
+    : "p-3 text-xs bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-white/90 shadow-lg";
+
+  const headerClasses = theme === 'osrs' ? "osrs-tooltip-header" : "font-medium whitespace-nowrap";
+  const tooltipbtnClasses =
+    theme === "osrs"
+      ? "osrs-toolbar-btn"
+      : "w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors flex items-center justify-center cursor-help z-10";
 
   useEffect(() => {
     if (onTooltipVisibilityChange) {
@@ -24,21 +35,21 @@ const SolutionTooltipHelp: React.FC<SolutionTooltipHelpProps> = ({ onTooltipVisi
       onMouseEnter={() => setIsTooltipVisible(true)}
       onMouseLeave={() => setIsTooltipVisible(false)}
     >
-      <div className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors flex items-center justify-center cursor-help z-10">
+      <div className={tooltipbtnClasses}>
         <span className="text-xs text-white/70">?</span>
       </div>
 
       {isTooltipVisible && (
         <div ref={tooltipRef} className="absolute top-full right-0 mt-2 w-80" style={{ zIndex: 100 }}>
-          <div className="p-3 text-xs bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-white/90 shadow-lg">
+          <div className={containerClasses}>
             <div className="space-y-4">
-              <h3 className="font-medium whitespace-nowrap">Keyboard Shortcuts</h3>
+              <h3 className={headerClasses}>Keyboard Shortcuts</h3>
               <div className="space-y-3">
                 {[
-                  { label: "Toggle Window", keys: ["⌘", "B"], desc: "Show or hide this window." },
-                  { label: "Take Screenshot", keys: ["⌘", "H"], desc: "Capture code or question for debugging help." },
-                  { label: "Debug", keys: ["⌘", "↵"], desc: "Generate new solutions with all screenshots." },
-                  { label: "Start Over", keys: ["⌘", "R"], desc: "Start fresh with a new question." }
+                  { label: "Toggle Window", keys: ["CTRL", "B"], desc: "Show or hide this window." },
+                  { label: "Take Screenshot", keys: ["CTRL", "H"], desc: "Capture code or question for debugging help." },
+                  { label: "Debug", keys: ["CTRL", "↵"], desc: "Generate new solutions with all screenshots." },
+                  { label: "Start Over", keys: ["CTRL", "R"], desc: "Start fresh with a new question." }
                 ].map((cmd, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between">
@@ -47,14 +58,14 @@ const SolutionTooltipHelp: React.FC<SolutionTooltipHelpProps> = ({ onTooltipVisi
                         {cmd.keys.map((k) => (
                           <span
                             key={k}
-                            className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none"
+                            className="bg-white/10 px-1.5 py-0.5 rounded text-xs leading-none"
                           >
                             {k}
                           </span>
                         ))}
                       </div>
                     </div>
-                    <p className="text-[10px] leading-relaxed text-white/70 whitespace-nowrap truncate">
+                    <p className="text-xs leading-relaxed text-white/70 whitespace-nowrap truncate">
                       {cmd.desc}
                     </p>
                   </div>

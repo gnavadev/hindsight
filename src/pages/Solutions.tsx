@@ -41,13 +41,13 @@ export const ComplexitySection = ({ timeComplexity, spaceComplexity, isLoading, 
             <div className={theme === 'osrs' ? '' : 'flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100'}>
             {theme === 'default' && <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />}
             <div>
-                <strong>Time:</strong> {timeComplexity}
+                Time: {timeComplexity}
             </div>
             </div>
             <div className={theme === 'osrs' ? '' : 'flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100'}>
             {theme === 'default' && <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />}
             <div>
-                <strong>Space:</strong> {spaceComplexity}
+                Space: {spaceComplexity}
             </div>
             </div>
         </div>
@@ -113,7 +113,8 @@ const SolutionSection = ({
               padding: "1rem",
               whiteSpace: "pre-wrap",
               wordBreak: "break-all",
-              backgroundColor: theme === 'osrs' ? 'rgba(0,0,0,0.8)' : "rgba(22, 27, 34, 0.5)"
+              backgroundColor: theme === 'osrs' ? 'rgba(0,0,0,0.8)' : "rgba(22, 27, 34, 0.5)",
+              fontSize: "0.8rem",
             }}
             wrapLongLines={true}
           >
@@ -321,7 +322,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
           />
           
-          <div className={theme === 'osrs' ? "w-full text-sm osrs-container rounded-md" : "w-full text-sm bg-black/60 rounded-md"}>
+          <div className={theme === 'osrs' ? "w-full text-sm  osrs-container rounded-md" : "w-full text-sm bg-black/60 rounded-md"}>
             <div className="rounded-lg overflow-hidden">
                 <div className="px-4 py-3 space-y-4 max-w-full">
                     <ContentSection

@@ -4,13 +4,12 @@ import { WindowHelper } from "./WindowHelper";
 import { ScreenshotHelper } from "./ScreenshotHelper";
 import { ShortcutsHelper } from "./shortcuts";
 import { ProcessingHelper } from "./ProcessingHelper";
-import { NewSolutionData } from "../common/types/solutions"; // CHANGE: Import the new types
-
+import { NewSolutionData } from "../common/types/solutions"; 
 
 export class AppState {
   private static instance: AppState | null = null;
 
-  private windowHelper: WindowHelper;
+  public windowHelper: WindowHelper;
   private screenshotHelper: ScreenshotHelper;
   public shortcutsHelper: ShortcutsHelper;
   public processingHelper: ProcessingHelper;
@@ -18,12 +17,11 @@ export class AppState {
   // View management
   private view: "queue" | "solutions" = "queue";
 
-  private problemInfo: any | null = null; // Using 'any' for simplicity, but a specific type is better.
-
-  // CHANGE: Added a private property to store the generated solution.
+  private problemInfo: any | null = null; 
   private solutionInfo: NewSolutionData | null = null;
-
   private hasDebugged: boolean = false;
+  // CHANGE: Added state to track mouse event status
+  private areMouseEventsIgnored: boolean = true;
 
   // Processing events
   public readonly PROCESSING_EVENTS = {
@@ -79,7 +77,6 @@ export class AppState {
     this.problemInfo = problemInfo;
   }
 
-  // CHANGE: Added getter and setter for the solution info.
   public getSolutionInfo(): NewSolutionData | null {
     return this.solutionInfo;
   }
@@ -96,6 +93,20 @@ export class AppState {
     this.hasDebugged = value;
   }
 
+  // CHANGE: Added getter and setter for the new state
+  public getAreMouseEventsIgnored(): boolean {
+    return this.areMouseEventsIgnored;
+  }
+
+  public setAreMouseEventsIgnored(value: boolean): void {
+    this.areMouseEventsIgnored = value;
+    if (value) {
+        this.windowHelper.disableMouseEvents();
+    } else {
+        this.windowHelper.enableMouseEvents();
+    }
+  }
+
   // --- Helpers ---
   public getScreenshotHelper(): ScreenshotHelper {
     return this.screenshotHelper;
@@ -105,12 +116,10 @@ export class AppState {
   public clearQueues(): void {
     this.screenshotHelper.clearQueues();
     this.problemInfo = null;
-    // CHANGE: Ensure the solution info is also cleared on reset.
     this.solutionInfo = null;
     this.setView("queue");
   }
   
-  // ... (rest of the class methods like isVisible, getScreenshotQueue, createWindow, etc. remain the same) ...
   public isVisible(): boolean {
     return this.windowHelper.isVisible();
   }

@@ -25,7 +25,6 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
     onTooltipVisibilityChange(isTooltipVisible, tooltipHeight);
   }, [isTooltipVisible, onTooltipVisibilityChange]);
 
-  // helper for button style
   const btnClass = theme === "osrs"
     ? "osrs-toolbar-btn"
     : "bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70 font-bold";
@@ -71,7 +70,7 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
         )}
 
         {/* Tooltip */}
-        <TooltipHelp onTooltipVisibilityChange={onTooltipVisibilityChange} />
+        <TooltipHelp onTooltipVisibilityChange={onTooltipVisibilityChange || (() => {})} theme={theme}/>
 
         {/* Theme Toggle */}
         <ThemeToggleButton />
@@ -91,7 +90,7 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
       </div>
 
       {/* Audio Result */}
-      {audioResult && (
+      {/* {audioResult && (
         <div
           className={
             theme === "osrs"
@@ -101,7 +100,7 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
         >
           <span className="font-semibold">Audio Result:</span> {audioResult}
         </div>
-      )}
+      )} */}
     </div>
   );
 };

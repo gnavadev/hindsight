@@ -1,5 +1,6 @@
 import React from "react"
 import { ScreenshotItem } from "../../layout"
+import { Theme, useTheme } from "../../../contexts"
 
 interface Screenshot {
   path: string
@@ -10,11 +11,13 @@ interface ScreenshotQueueProps {
   isLoading: boolean
   screenshots: Screenshot[]
   onDeleteScreenshot: (index: number) => void
+  theme?: Theme
 }
 const ScreenshotQueue: React.FC<ScreenshotQueueProps> = ({
   isLoading,
   screenshots,
-  onDeleteScreenshot
+  onDeleteScreenshot,
+  theme
 }) => {
   if (screenshots.length === 0) {
     return <></>
@@ -23,7 +26,7 @@ const ScreenshotQueue: React.FC<ScreenshotQueueProps> = ({
   const displayScreenshots = screenshots.slice(0, 5)
 
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className={`grid grid-cols-5 gap-1 ${theme === "osrs" ? "osrs-container" : ""}`}>
       {displayScreenshots.map((screenshot, index) => (
         <ScreenshotItem
           key={screenshot.path}

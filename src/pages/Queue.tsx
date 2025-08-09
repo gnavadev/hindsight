@@ -9,6 +9,7 @@ import {
   ToastMessage
 } from "../components/ui/Toast"
 import QueueCommands from "../components/features/Queue/QueueCommands"
+import { useTheme } from "../contexts/ThemeContext"
 
 interface QueueProps {
   setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>
@@ -25,6 +26,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const [tooltipHeight, setTooltipHeight] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
+  const { theme } = useTheme()
 
   const { data: screenshots = [], refetch } = useQuery<Array<{ path: string; preview: string }>, Error>(
     ["screenshots"],
@@ -145,6 +147,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
             isLoading={false}
             screenshots={screenshots}
             onDeleteScreenshot={handleDeleteScreenshot}
+            theme={theme}
           />
           <QueueCommands
             screenshots={screenshots}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IoLogOutOutline } from "react-icons/io5";
-import { ThemeToggleButton, SolutionTooltipHelp } from "../../layout";
+import { ThemeToggleButton, TooltipHelp } from "../../layout";
 import { useTheme } from "../../../contexts";
 
 interface SolutionCommandsProps {
@@ -33,7 +33,7 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
       : "bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70";
 
   return (
-    <div className={`pt-2 w-fit ${theme === "osrs" ? "osrs-container" : ""}`}>
+    <div className={`pt-2 w-fit relative z-20 ${theme === "osrs" ? "osrs-container" : ""}`}>
       <div
         className={
           theme === "osrs"
@@ -84,8 +84,9 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
         </div>
 
         {/* Tooltip */}
-        <SolutionTooltipHelp
+        <TooltipHelp
           onTooltipVisibilityChange={onTooltipVisibilityChange || (() => {})}
+          theme={theme}
         />
 
         {/* Theme Toggle */}

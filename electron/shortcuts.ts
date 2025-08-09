@@ -35,25 +35,23 @@ export class ShortcutsHelper {
         "Command + R pressed. Canceling requests and resetting queues..."
       )
 
-      // Cancel ongoing API requests
       this.appState.processingHelper.cancelOngoingRequests()
-
-      // Clear both screenshot queues
       this.appState.clearQueues()
-
       console.log("Cleared queues.")
-
-      // Update the view state to 'queue'
       this.appState.setView("queue")
 
-      // Notify renderer process to switch view to 'queue'
       const mainWindow = this.appState.getMainWindow()
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("reset-view")
       }
     })
 
-    // New shortcuts for moving the window
+    globalShortcut.register("CommandOrControl+I", () => {
+        const currentState = this.appState.getAreMouseEventsIgnored();
+        this.appState.setAreMouseEventsIgnored(!currentState);
+        console.log(`Mouse events ignored: ${!currentState}`);
+    });
+
     globalShortcut.register("CommandOrControl+Left", () => {
       console.log("Command/Ctrl + Left pressed. Moving window left.")
       this.appState.moveWindowLeft()
@@ -74,13 +72,10 @@ export class ShortcutsHelper {
 
     globalShortcut.register("CommandOrControl+B", () => {
       this.appState.toggleMainWindow()
-      // If window exists and we're showing it, bring it to front
       const mainWindow = this.appState.getMainWindow()
       if (mainWindow && !this.appState.isVisible()) {
-        // Force the window to the front on macOS
         if (process.platform === "darwin") {
           mainWindow.setAlwaysOnTop(true, "normal")
-          // Reset alwaysOnTop after a brief delay
           setTimeout(() => {
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.setAlwaysOnTop(true, "floating")
@@ -90,7 +85,6 @@ export class ShortcutsHelper {
       }
     })
 
-    // Unregister shortcuts when quitting
     app.on("will-quit", () => {
       globalShortcut.unregisterAll()
     })

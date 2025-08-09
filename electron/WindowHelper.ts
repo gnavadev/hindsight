@@ -69,6 +69,10 @@ export class WindowHelper {
       hasShadow: false,
       backgroundColor: "#00000000",
       focusable: true,
+      // Additional stealth options
+      minimizable: false,
+      maximizable: false,
+      resizable: false,
     };
     this.mainWindow = new BrowserWindow(windowSettings);
 
@@ -89,21 +93,8 @@ export class WindowHelper {
     this.currentX = 0;
     this.mainWindow.setContentProtection(true);
 
-    if (process.platform === "darwin") {
-      this.mainWindow.setVisibleOnAllWorkspaces(true, {
-        visibleOnFullScreen: true,
-      });
-      this.mainWindow.setHiddenInMissionControl(true);
-      this.mainWindow.setAlwaysOnTop(true, "floating");
-    }
-    if (process.platform === "linux") {
-      if (this.mainWindow.setHasShadow) {
-        this.mainWindow.setHasShadow(false);
-      }
-      this.mainWindow.setFocusable(false);
-    }
-    this.mainWindow.setSkipTaskbar(true);
-    this.mainWindow.setAlwaysOnTop(true);
+    // Additional stealth configurations
+    this.applyStealthSettings();
 
     const bounds = this.mainWindow.getBounds();
     this.windowPosition = { x: bounds.x, y: bounds.y };
@@ -113,6 +104,41 @@ export class WindowHelper {
 
     this.setupWindowListeners();
     this.isWindowVisible = true;
+  }
+
+  private applyStealthSettings(): void {
+    if (!this.mainWindow) return;
+
+    // Universal stealth settings
+    this.mainWindow.setMenuBarVisibility(false);
+    this.mainWindow.setSkipTaskbar(true);
+    this.mainWindow.setAlwaysOnTop(true);
+    
+    // CHANGE: This line has been removed to allow mouse interaction.
+    // this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
+
+    // Platform-specific stealth settings
+    if (process.platform === "darwin") {
+      // macOS specific
+      this.mainWindow.setVisibleOnAllWorkspaces(true, {
+        visibleOnFullScreen: true,
+      });
+      this.mainWindow.setHiddenInMissionControl(true);
+      this.mainWindow.setAlwaysOnTop(true, "floating");
+    }
+    
+    if (process.platform === "linux") {
+      // Linux specific
+      if (this.mainWindow.setHasShadow) {
+        this.mainWindow.setHasShadow(false);
+      }
+      this.mainWindow.setFocusable(false);
+    }
+
+    if (process.platform === "win32") {
+      // Windows specific
+      this.mainWindow.setSkipTaskbar(true);
+    }
   }
 
   private setupWindowListeners(): void {
@@ -140,6 +166,18 @@ export class WindowHelper {
       this.windowPosition = null;
       this.windowSize = null;
     });
+  }
+
+  // Method to temporarily enable mouse events when needed
+  public enableMouseEvents(): void {
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+    this.mainWindow.setIgnoreMouseEvents(false);
+  }
+
+  // Method to disable mouse events for maximum stealth
+  public disableMouseEvents(): void {
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+    this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
   }
 
   public getMainWindow(): BrowserWindow | null {
@@ -177,9 +215,12 @@ export class WindowHelper {
         height: this.windowSize.height,
       });
     }
-
+    
     this.mainWindow.showInactive();
     this.mainWindow.setContentProtection(true);
+
+    // Reapply stealth settings after showing
+    this.applyStealthSettings();
     this.isWindowVisible = true;
   }
 

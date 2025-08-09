@@ -175,6 +175,10 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
   const { theme } = useTheme();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
+  const handleTooltipVisibilityChange = (visible: boolean, height: number) => {
+    setIsTooltipVisible(visible)
+    setTooltipHeight(height)
+  }
 
   const { data: problemStatementData, isLoading: isProblemLoading } = useQuery<NewProblemStatementData | null>(
     ["problem_statement"]
@@ -284,11 +288,6 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
     };
   }, [isTooltipVisible, tooltipHeight, queryClient, refetchScreenshots]);
  
-  const handleTooltipVisibilityChange = (visible: boolean, height: number) => {
-    setIsTooltipVisible(visible);
-    setTooltipHeight(height);
-  };
-
   return (
     <>
       {!isResetting && queryClient.getQueryData<NewSolutionData>(["new_solution"])?.solution ? (
@@ -311,6 +310,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
                     isLoading={debugProcessing}
                     screenshots={extraScreenshots}
                     onDeleteScreenshot={handleDeleteExtraScreenshot}
+                    theme={theme}
                   />
                 </div>
               </div>

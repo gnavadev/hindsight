@@ -54,7 +54,7 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
         <div className="flex items-center gap-2 whitespace-nowrap">
           <span className={theme === "osrs" ?  "leading-none truncate" : "text-[11px] leading-none truncate"}>
             {extraScreenshots.length === 0
-              ? "Screenshot your code"
+              ? "Follow Up Screenshot"
               : "Screenshot"}
           </span>
           <div className="flex gap-1">

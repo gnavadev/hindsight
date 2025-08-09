@@ -99,7 +99,6 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
               ? "osrs-quit"
               : "text-red-500/70 hover:text-red-500/90 transition-colors hover:cursor-pointer"
           }
-          title="Sign Out"
           onClick={() => window.electronAPI.quitApp()}
         >
           <IoLogOutOutline className="w-4 h-4" />

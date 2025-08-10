@@ -11,7 +11,7 @@ export class LLMHelper {
   For any user input, you will first analyze and classify the problem, then provide a structured and actionable solution.`;
   constructor(apiKey: string) {
     const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    this.model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     // this.model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
   }
 
@@ -122,7 +122,7 @@ Your response MUST be a valid JSON object.
 {
   "solution": {
     "answer": "The solution content, following the rules above.",
-    "reasoning": "A high-level, one-sentence summary of the overall approach taken.",
+    "reasoning": "A high-level, summary of the overall approach taken, explaining the reasoning behind every decision.",
     "time_complexity": "For 'coding' problems, the Big O time complexity (e.g., 'O(n)'). For others, null.",
     "space_complexity": "For 'coding' problems, the Big O space complexity (e.g., 'O(1)'). For others, null.",
     "suggested_next_steps": ["A relevant follow-up action.", "Another possible action."]

@@ -4,63 +4,138 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ReactMarkdown from "react-markdown";
 import ScreenshotQueue from "../components/features/Queue/ScreenshotQueue";
-import { Toast,ToastDescription,ToastMessage,ToastTitle,ToastVariant } from "../components/ui";
-import { NewProblemStatementData, NewSolutionData } from "../../common/types/solutions"; 
+import {
+  Toast,
+  ToastDescription,
+  ToastMessage,
+  ToastTitle,
+  ToastVariant,
+} from "../components/ui";
+import {
+  NewProblemStatementData,
+  NewSolutionData,
+} from "../../common/types/solutions";
 import SolutionCommands from "../components/features/Solutions/SolutionCommands";
-import { Theme, useTheme } from '../contexts/ThemeContext';
+import { Theme, useTheme } from "../contexts/ThemeContext";
 import Debug from "./Debug";
 
-export const ContentSection = ({ title, content, isLoading, theme }: { title: string; content: React.ReactNode; isLoading: boolean; theme: Theme; }) => (
+export const ContentSection = ({
+  title,
+  content,
+  isLoading,
+  theme,
+}: {
+  title: string;
+  content: React.ReactNode;
+  isLoading: boolean;
+  theme: Theme;
+}) => (
   <div className="space-y-2">
-    <h2 className={theme === 'osrs' ? 'osrs-header' : 'text-[13px] font-medium text-white tracking-wide'}>{title}</h2>
+    <h2
+      className={
+        theme === "osrs"
+          ? "osrs-header"
+          : "text-[13px] font-medium text-white tracking-wide"
+      }
+    >
+      {title}
+    </h2>
     {isLoading ? (
       <div className="mt-4 flex">
-        <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
+        <p
+          className={
+            theme === "osrs"
+              ? "osrs-content"
+              : "text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse"
+          }
+        >
           Loading...
         </p>
       </div>
     ) : (
-      <div className={theme === 'osrs' ? 'osrs-content' : 'text-[13px] leading-[1.4] text-gray-100 max-w-[600px]'}>
+      <div
+        className={
+          theme === "osrs"
+            ? "osrs-content"
+            : "text-[13px] leading-[1.4] text-gray-100 max-w-[600px]"
+        }
+      >
         {content}
       </div>
     )}
   </div>
 );
 
-export const ComplexitySection = ({ timeComplexity, spaceComplexity, isLoading, theme }: { timeComplexity: string | null; spaceComplexity: string | null; isLoading: boolean; theme: Theme; }) => (
-    <div className="space-y-2">
-        <h2 className={theme === 'osrs' ? 'osrs-header' : 'text-[13px] font-medium text-white tracking-wide'}>
-            Complexity
-        </h2>
-        {isLoading ? (
-        <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
-            Calculating complexity...
-        </p>
-        ) : (
-        <div className={theme === 'osrs' ? 'osrs-content space-y-1' : 'space-y-1'}>
-            <div className={theme === 'osrs' ? '' : 'flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100'}>
-            {theme === 'default' && <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />}
-            <div>
-                Time: {timeComplexity}
-            </div>
-            </div>
-            <div className={theme === 'osrs' ? '' : 'flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100'}>
-            {theme === 'default' && <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />}
-            <div>
-                Space: {spaceComplexity}
-            </div>
-            </div>
+export const ComplexitySection = ({
+  timeComplexity,
+  spaceComplexity,
+  isLoading,
+  theme,
+}: {
+  timeComplexity: string | null;
+  spaceComplexity: string | null;
+  isLoading: boolean;
+  theme: Theme;
+}) => (
+  <div className="space-y-2">
+    <h2
+      className={
+        theme === "osrs"
+          ? "osrs-header"
+          : "text-[13px] font-medium text-white tracking-wide"
+      }
+    >
+      Complexity
+    </h2>
+    {isLoading ? (
+      <p
+        className={
+          theme === "osrs"
+            ? "osrs-content"
+            : "text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse"
+        }
+      >
+        Calculating complexity...
+      </p>
+    ) : (
+      <div
+        className={theme === "osrs" ? "osrs-content space-y-1" : "space-y-1"}
+      >
+        <div
+          className={
+            theme === "osrs"
+              ? ""
+              : "flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100"
+          }
+        >
+          {theme === "default" && (
+            <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
+          )}
+          <div>Time: {timeComplexity}</div>
         </div>
-        )}
-    </div>
+        <div
+          className={
+            theme === "osrs"
+              ? ""
+              : "flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100"
+          }
+        >
+          {theme === "default" && (
+            <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
+          )}
+          <div>Space: {spaceComplexity}</div>
+        </div>
+      </div>
+    )}
+  </div>
 );
 
 const SolutionSection = ({
   title,
   content,
   isLoading,
-  language = 'python',
-  theme
+  language = "python",
+  theme,
 }: {
   title: string;
   content: string;
@@ -72,7 +147,10 @@ const SolutionSection = ({
 
   const copyToClipboard = () => {
     if (typeof content === "string") {
-      const cleanedCode = content.replace(/^(```|""")\w*\n?/, '').replace(/\n?(```|""")$/, '').trim();
+      const cleanedCode = content
+        .replace(/^(```|""")\w*\n?/, "")
+        .replace(/\n?(```|""")$/, "")
+        .trim();
       navigator.clipboard.writeText(cleanedCode).then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -80,20 +158,36 @@ const SolutionSection = ({
     }
   };
 
-  const cleanedCode = typeof content === 'string' 
-    ? content.replace(/^(```|""")\w*\n?/, '').replace(/\n?(```|""")$/, '').trim()
-    : '';
+  const cleanedCode =
+    typeof content === "string"
+      ? content
+          .replace(/^(```|""")\w*\n?/, "")
+          .replace(/\n?(```|""")$/, "")
+          .trim()
+      : "";
 
   return (
     <div className="space-y-2 relative">
-      <h2 className={theme === 'osrs' ? 'osrs-header' : 'text-[13px] font-medium text-white tracking-wide'}>
+      <h2
+        className={
+          theme === "osrs"
+            ? "osrs-header"
+            : "text-[13px] font-medium text-white tracking-wide"
+        }
+      >
         {title}
       </h2>
       {isLoading ? (
         <div className="mt-4 flex">
-            <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
-                Loading solution...
-            </p>
+          <p
+            className={
+              theme === "osrs"
+                ? "osrs-content"
+                : "text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse"
+            }
+          >
+            Loading solution...
+          </p>
         </div>
       ) : (
         <div className="w-full relative">
@@ -113,7 +207,8 @@ const SolutionSection = ({
               padding: "1rem",
               whiteSpace: "pre-wrap",
               wordBreak: "break-all",
-              backgroundColor: theme === 'osrs' ? 'rgba(0,0,0,0.8)' : "rgba(22, 27, 34, 0.5)",
+              backgroundColor:
+                theme === "osrs" ? "rgba(0,0,0,0.8)" : "rgba(22, 27, 34, 0.5)",
               fontSize: "0.8rem",
             }}
             wrapLongLines={true}
@@ -129,7 +224,7 @@ const SolutionSection = ({
 const AnswerRenderer = ({
   answer,
   isLoading,
-  theme
+  theme,
 }: {
   answer?: any;
   isLoading: boolean;
@@ -138,7 +233,13 @@ const AnswerRenderer = ({
   if (isLoading) {
     return (
       <div className="mt-2 flex">
-        <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
+        <p
+          className={
+            theme === "osrs"
+              ? "osrs-content"
+              : "text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse"
+          }
+        >
           Loading solution...
         </p>
       </div>
@@ -146,16 +247,37 @@ const AnswerRenderer = ({
   }
 
   if (!answer) return null;
-  
-  const questionBlocks = answer.split(/(?=###\s+Question\s+\d+)/).filter((block: string) => block.trim() !== '');
+
+  const questionBlocks = answer
+    .split(/(?=###\s+Question\s+\d+)/)
+    .filter((block: string) => block.trim() !== "");
   return (
     <div className="space-y-2">
       {questionBlocks.map((block: string, index: number) => (
-        <div key={index} className={theme === 'osrs' ? 'osrs-mcq-block' : 'bg-black/20 p-3 rounded-md'}>
+        <div
+          key={index}
+          className={
+            theme === "osrs" ? "osrs-mcq-block" : "bg-black/20 p-3 rounded-md"
+          }
+        >
           <ReactMarkdown
             components={{
-              h3: ({node, ...props}) => <h3 className={theme === 'osrs' ? '' : 'text-sm font-semibold mb-1 text-gray-200'} {...props} />,
-              p: ({node, ...props}) => <p className={theme === 'osrs' ? '' : 'text-xs text-gray-300'} {...props} />,
+              h3: ({ node, ...props }) => (
+                <h3
+                  className={
+                    theme === "osrs"
+                      ? ""
+                      : "text-sm font-semibold mb-1 text-gray-200"
+                  }
+                  {...props}
+                />
+              ),
+              p: ({ node, ...props }) => (
+                <p
+                  className={theme === "osrs" ? "" : "text-xs text-gray-300"}
+                  {...props}
+                />
+              ),
             }}
           >
             {block}
@@ -166,9 +288,10 @@ const AnswerRenderer = ({
   );
 };
 
-
 interface SolutionsProps {
-  setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>;
+  setView: React.Dispatch<
+    React.SetStateAction<"queue" | "solutions" | "debug">
+  >;
 }
 
 const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
@@ -176,34 +299,29 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
   const handleTooltipVisibilityChange = (visible: boolean, height: number) => {
-    setIsTooltipVisible(visible)
-    setTooltipHeight(height)
-  }
+    setIsTooltipVisible(visible);
+    setTooltipHeight(height);
+  };
 
-  const { data: problemStatementData, isLoading: isProblemLoading } = useQuery<NewProblemStatementData | null>(
-    ["problem_statement"]
-  );
-  
-  const { data: solution, isLoading: isSolutionLoading } = useQuery<NewSolutionData | null>(
-    ["solution"]
-  );
+  const { data: problemStatementData, isLoading: isProblemLoading } =
+    useQuery<NewProblemStatementData | null>(["problem_statement"]);
+
+  const { data: solution, isLoading: isSolutionLoading } =
+    useQuery<NewSolutionData | null>(["solution"]);
 
   const { data: extraScreenshots = [], refetch: refetchScreenshots } = useQuery<
     Array<{ path: string; preview: string }>,
     Error
-  >(
-    ["extras"],
-    async () => {
-      try {
-        const existing = await window.electronAPI?.getScreenshots();
-        return existing || [];
-      } catch (error) {
-        console.error("Error loading extra screenshots:", error);
-        return [];
-      }
+  >(["extras"], async () => {
+    try {
+      const existing = await window.electronAPI?.getScreenshots();
+      return existing || [];
+    } catch (error) {
+      console.error("Error loading extra screenshots:", error);
+      return [];
     }
-  );
-  
+  });
+
   const problemType = problemStatementData?.problem_type;
   const language = problemStatementData?.details?.language;
   const answerData = solution?.solution?.answer;
@@ -213,20 +331,30 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
 
   const [debugProcessing, setDebugProcessing] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<ToastMessage>({ title: "", description: "", variant: "neutral" });
+  const [toastMessage, setToastMessage] = useState<ToastMessage>({
+    title: "",
+    description: "",
+    variant: "neutral",
+  });
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [tooltipHeight, setTooltipHeight] = useState(0);
   const [isResetting, setIsResetting] = useState(false);
 
-  const showToast = ( title: string, description: string, variant: ToastVariant) => {
+  const showToast = (
+    title: string,
+    description: string,
+    variant: ToastVariant
+  ) => {
     setToastMessage({ title, description, variant });
     setToastOpen(true);
   };
- 
+
   const handleDeleteExtraScreenshot = async (index: number) => {
     const screenshotToDelete = extraScreenshots[index];
     try {
-      const response = await window.electronAPI.deleteScreenshot(screenshotToDelete.path);
+      const response = await window.electronAPI.deleteScreenshot(
+        screenshotToDelete.path
+      );
       if (response.success) {
         refetchScreenshots();
       } else {
@@ -236,7 +364,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
       console.error("Error deleting extra screenshot:", error);
     }
   };
- 
+
   useEffect(() => {
     const updateDimensions = () => {
       if (contentRef.current) {
@@ -247,7 +375,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         }
         window.electronAPI.updateContentDimensions({
           width: contentWidth,
-          height: contentHeight
+          height: contentHeight,
         });
       }
     };
@@ -272,36 +400,54 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
       window.electronAPI.onDebugSuccess((data) => {
         queryClient.setQueryData(["new_solution"], data);
         setDebugProcessing(false);
+        refetchScreenshots();
       }),
       window.electronAPI.onDebugError(() => {
-        showToast("Processing Failed", "There was an error debugging your code.", "error");
+        showToast(
+          "Processing Failed",
+          "There was an error debugging your code.",
+          "error"
+        );
         setDebugProcessing(false);
       }),
       window.electronAPI.onProcessingNoScreenshots(() => {
-        showToast("No Screenshots", "There are no extra screenshots to process.", "neutral");
-      })
+        showToast(
+          "No Screenshots",
+          "There are no extra screenshots to process.",
+          "neutral"
+        );
+      }),
     ];
- 
+
     return () => {
       resizeObserver.disconnect();
       cleanupFunctions.forEach((cleanup) => cleanup());
     };
   }, [isTooltipVisible, tooltipHeight, queryClient, refetchScreenshots]);
- 
+
   return (
     <>
-      {!isResetting && queryClient.getQueryData<NewSolutionData>(["new_solution"])?.solution ? (
+      {!isResetting &&
+      queryClient.getQueryData<NewSolutionData>(["new_solution"])?.solution ? (
         <Debug
           isProcessing={debugProcessing}
           setIsProcessing={setDebugProcessing}
         />
       ) : (
-        <div ref={contentRef} className="relative flex flex-col space-y-3 px-4 py-3">
-            <Toast open={toastOpen} onOpenChange={setToastOpen} variant={toastMessage.variant} duration={3000} >
-                <ToastTitle>{toastMessage.title}</ToastTitle>
-                <ToastDescription>{toastMessage.description}</ToastDescription>
-            </Toast>
-          
+        <div
+          ref={contentRef}
+          className="relative flex flex-col space-y-3 px-4 py-3"
+        >
+          <Toast
+            open={toastOpen}
+            onOpenChange={setToastOpen}
+            variant={toastMessage.variant}
+            duration={3000}
+          >
+            <ToastTitle>{toastMessage.title}</ToastTitle>
+            <ToastDescription>{toastMessage.description}</ToastDescription>
+          </Toast>
+
           {answerData && (
             <div className="bg-transparent w-fit">
               <div className="pb-3">
@@ -321,64 +467,88 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
             extraScreenshots={extraScreenshots}
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
           />
-          
-          <div className={theme === 'osrs' ? "w-full text-sm  osrs-container rounded-md" : "w-full text-sm bg-black/60 rounded-md"}>
-            <div className="rounded-lg overflow-hidden">
-                <div className="px-4 py-3 space-y-4 max-w-full">
-                    <ContentSection
-                        title={"Problem Statement"}
-                        content={problemStatementData?.problem_statement}
-                        isLoading={isProblemLoading || !problemStatementData}
-                        theme={theme}
-                    />
-                    
-                    {problemStatementData && !answerData && (
-                        <div className="mt-4 flex">
-                        <p className={theme === 'osrs' ? 'osrs-content' : 'text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse'}>
-                            Generating solution...
-                        </p>
-                        </div>
-                    )}
-                    
-                    {answerData && (
-                        <>
-                        <ContentSection
-                            title="Analysis / Reasoning"
-                            content={reasoningData}
-                            isLoading={isSolutionLoading}
-                            theme={theme}
-                        />
 
-                        {problemType === 'coding' ? (
-                            <SolutionSection
-                                title="Solution"
-                                content={answerData}
-                                isLoading={isSolutionLoading}
-                                language={language}
-                                theme={theme}
-                            />
-                        ) : (
-                            <div className="space-y-2">
-                                <h2 className={theme === 'osrs' ? 'osrs-header' : 'text-[13px] font-medium text-white tracking-wide'}>Solution</h2>
-                                <AnswerRenderer
-                                    answer={answerData}
-                                    isLoading={isSolutionLoading}
-                                    theme={theme}
-                                />
-                            </div>
-                        )}
-                        
-                        {problemType === "coding" && (
-                            <ComplexitySection
-                            timeComplexity={timeComplexityData}
-                            spaceComplexity={spaceComplexityData}
-                            isLoading={isSolutionLoading || !timeComplexityData || !spaceComplexityData}
-                            theme={theme}
-                            />
-                        )}
-                        </>
+          <div
+            className={
+              theme === "osrs"
+                ? "w-full text-sm  osrs-container rounded-md"
+                : "w-full text-sm bg-black/60 rounded-md"
+            }
+          >
+            <div className="rounded-lg overflow-hidden">
+              <div className="px-4 py-3 space-y-4 max-w-full">
+                <ContentSection
+                  title={"Problem Statement"}
+                  content={problemStatementData?.problem_statement}
+                  isLoading={isProblemLoading || !problemStatementData}
+                  theme={theme}
+                />
+
+                {problemStatementData && !answerData && (
+                  <div className="mt-4 flex">
+                    <p
+                      className={
+                        theme === "osrs"
+                          ? "osrs-content"
+                          : "text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse"
+                      }
+                    >
+                      Generating solution...
+                    </p>
+                  </div>
+                )}
+
+                {answerData && (
+                  <>
+                    <ContentSection
+                      title="Analysis / Reasoning"
+                      content={reasoningData}
+                      isLoading={isSolutionLoading}
+                      theme={theme}
+                    />
+
+                    {problemType === "coding" ? (
+                      <SolutionSection
+                        title="Solution"
+                        content={answerData}
+                        isLoading={isSolutionLoading}
+                        language={language}
+                        theme={theme}
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <h2
+                          className={
+                            theme === "osrs"
+                              ? "osrs-header"
+                              : "text-[13px] font-medium text-white tracking-wide"
+                          }
+                        >
+                          Solution
+                        </h2>
+                        <AnswerRenderer
+                          answer={answerData}
+                          isLoading={isSolutionLoading}
+                          theme={theme}
+                        />
+                      </div>
                     )}
-                </div>
+
+                    {problemType === "coding" && (
+                      <ComplexitySection
+                        timeComplexity={timeComplexityData}
+                        spaceComplexity={spaceComplexityData}
+                        isLoading={
+                          isSolutionLoading ||
+                          !timeComplexityData ||
+                          !spaceComplexityData
+                        }
+                        theme={theme}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

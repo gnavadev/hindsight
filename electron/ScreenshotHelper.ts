@@ -74,6 +74,23 @@ export class ScreenshotHelper {
     this.extraScreenshotQueue = []
   }
 
+  // --- ADD THIS METHOD ---
+  public async clearExtraQueueFiles(): Promise<void> {
+    const filesToDelete = [...this.extraScreenshotQueue];
+    this.extraScreenshotQueue = []; // Immediately clear the array in memory
+  
+    // Asynchronously delete each file
+    const deletionPromises = filesToDelete.map(filePath => {
+      return fs.promises.unlink(filePath).catch(err => {
+        console.error(`Failed to delete extra screenshot ${filePath}:`, err);
+      });
+    });
+  
+    await Promise.all(deletionPromises);
+    console.log("[ScreenshotHelper] Extra screenshot queue files have been cleared.");
+  }
+  // --- END OF ADDED METHOD ---
+
   public async takeScreenshot(
     hideMainWindow: () => void,
     showMainWindow: () => void

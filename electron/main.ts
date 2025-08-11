@@ -4,7 +4,7 @@ import { WindowHelper } from "./WindowHelper";
 import { ScreenshotHelper } from "./ScreenshotHelper";
 import { ShortcutsHelper } from "./shortcuts";
 import { ProcessingHelper } from "./ProcessingHelper";
-import { NewSolutionData } from "../common/types/solutions"; 
+import { NewSolutionData } from "../common/types/solutions";
 
 export class AppState {
   private static instance: AppState | null = null;
@@ -17,10 +17,9 @@ export class AppState {
   // View management
   private view: "queue" | "solutions" = "queue";
 
-  private problemInfo: any | null = null; 
+  private problemInfo: any | null = null;
   private solutionInfo: NewSolutionData | null = null;
   private hasDebugged: boolean = false;
-  // CHANGE: Added state to track mouse event status
   private areMouseEventsIgnored: boolean = true;
 
   // Processing events
@@ -101,9 +100,9 @@ export class AppState {
   public setAreMouseEventsIgnored(value: boolean): void {
     this.areMouseEventsIgnored = value;
     if (value) {
-        this.windowHelper.disableMouseEvents();
+      this.windowHelper.disableMouseEvents();
     } else {
-        this.windowHelper.enableMouseEvents();
+      this.windowHelper.enableMouseEventsTemporary();
     }
   }
 
@@ -119,7 +118,7 @@ export class AppState {
     this.solutionInfo = null;
     this.setView("queue");
   }
-  
+
   public isVisible(): boolean {
     return this.windowHelper.isVisible();
   }

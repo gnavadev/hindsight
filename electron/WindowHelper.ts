@@ -1,5 +1,5 @@
 import { BrowserWindow, screen } from "electron";
-import { AppState } from "./main"; // Corrected the import path
+import { AppState } from "./main";
 import path from "node:path";
 import isDev from "electron-is-dev";
 
@@ -60,21 +60,39 @@ export class WindowHelper {
         nodeIntegration: false,
         contextIsolation: true,
         preload: path.join(__dirname, "preload.js"),
+        experimentalFeatures: false,
+        webSecurity: true,
+        allowRunningInsecureContent: false,
+        backgroundThrottling: false,
       },
-      show: true,
+      show: true, // Start hidden, show later
       alwaysOnTop: true,
       frame: false,
       transparent: true,
       fullscreenable: false,
       hasShadow: false,
       backgroundColor: "#00000000",
-      focusable: true,
-      // Additional stealth options
+      focusable: false, // Changed to false for stealth
       minimizable: false,
       maximizable: false,
       resizable: false,
+      skipTaskbar: true,
+      titleBarStyle: process.platform === "darwin" ? "hiddenInset" : undefined,
+      thickFrame: false,
+      acceptFirstMouse: false,
+      disableAutoHideCursor: true,
+      enableLargerThanScreen: true,
+      opacity: 0.6,
     };
     this.mainWindow = new BrowserWindow(windowSettings);
+
+    this.mainWindow.webContents.on("did-finish-load", () => {
+      const css = `
+        *::-webkit-scrollbar { display: none !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+      `;
+      this.mainWindow.webContents.insertCSS(css);
+    });
 
     if (isDev) {
       this.mainWindow.loadURL("http://localhost:5180");
@@ -91,9 +109,8 @@ export class WindowHelper {
 
     this.step = Math.floor(this.screenWidth / 10);
     this.currentX = 0;
-    this.mainWindow.setContentProtection(true);
+    this.mainWindow.setContentProtection(false);
 
-    // Additional stealth configurations
     this.applyStealthSettings();
 
     const bounds = this.mainWindow.getBounds();
@@ -109,26 +126,21 @@ export class WindowHelper {
   private applyStealthSettings(): void {
     if (!this.mainWindow) return;
 
-    // Universal stealth settings
     this.mainWindow.setMenuBarVisibility(false);
     this.mainWindow.setSkipTaskbar(true);
     this.mainWindow.setAlwaysOnTop(true);
-    
-    // CHANGE: This line has been removed to allow mouse interaction.
-    // this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
-    // Platform-specific stealth settings
+    this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
+
     if (process.platform === "darwin") {
-      // macOS specific
       this.mainWindow.setVisibleOnAllWorkspaces(true, {
         visibleOnFullScreen: true,
       });
       this.mainWindow.setHiddenInMissionControl(true);
       this.mainWindow.setAlwaysOnTop(true, "floating");
     }
-    
+
     if (process.platform === "linux") {
-      // Linux specific
       if (this.mainWindow.setHasShadow) {
         this.mainWindow.setHasShadow(false);
       }
@@ -136,7 +148,6 @@ export class WindowHelper {
     }
 
     if (process.platform === "win32") {
-      // Windows specific
       this.mainWindow.setSkipTaskbar(true);
     }
   }
@@ -168,13 +179,16 @@ export class WindowHelper {
     });
   }
 
-  // Method to temporarily enable mouse events when needed
-  public enableMouseEvents(): void {
+  public enableMouseEventsTemporary(duration: number = 5000): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+
     this.mainWindow.setIgnoreMouseEvents(false);
+
+    setTimeout(() => {
+      this.disableMouseEvents();
+    }, duration);
   }
 
-  // Method to disable mouse events for maximum stealth
   public disableMouseEvents(): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
     this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -215,11 +229,10 @@ export class WindowHelper {
         height: this.windowSize.height,
       });
     }
-    
-    this.mainWindow.showInactive();
-    this.mainWindow.setContentProtection(true);
 
-    // Reapply stealth settings after showing
+    this.mainWindow.showInactive();
+    this.mainWindow.setContentProtection(false);
+
     this.applyStealthSettings();
     this.isWindowVisible = true;
   }

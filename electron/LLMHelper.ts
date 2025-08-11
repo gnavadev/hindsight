@@ -136,63 +136,124 @@ Important: Return ONLY the raw JSON object, without any markdown formatting or c
     try {
       result = await this.model.generateContent(prompt);
       const response = result.response;
-      
+
       const text = this.cleanJsonResponse(response.text());
 
       if (!text) {
-        console.error("[LLMHelper] The API response did not contain a valid JSON object.");
+        console.error(
+          "[LLMHelper] The API response did not contain a valid JSON object."
+        );
         throw new Error("The API response was empty or malformed.");
       }
       const parsed = JSON.parse(text);
       console.log("[LLMHelper] Parsed LLM response:", parsed);
 
-      if (problemInfo.problem_type === 'coding' && parsed.solution?.answer) {
-        const language = problemInfo.details?.language?.toLowerCase() || 'python';
+      if (problemInfo.problem_type === "coding" && parsed.solution?.answer) {
+        const language =
+          problemInfo.details?.language?.toLowerCase() || "python";
         parsed.solution.answer = `\`\`\`${language}\n${parsed.solution.answer}\n\`\`\``;
       }
       return parsed;
     } catch (error) {
       console.error("[LLMHelper] Error in generateSolution:", error);
       if (result && result.response) {
-          console.error("[LLMHelper] Raw text that failed to parse:", result.response.text());
+        console.error(
+          "[LLMHelper] Raw text that failed to parse:",
+          result.response.text()
+        );
       }
       throw error;
     }
   }
 
+  /**
+   * Analyzes new images (e.g., error messages) to correct a previous solution.
+   *
+   * @param problemInfo The original problem classification from `extractProblemFromImages`.
+   * @param currentCode The user's current, potentially incorrect, code or solution text.
+   * @param debugImagePaths Paths to new images showing the error or issue.
+   * @returns A new solution object in the same format as `generateSolution`.
+   */
   public async debugSolutionWithImages(
     problemInfo: any,
     currentCode: string,
     debugImagePaths: string[]
   ) {
+    let result: any;
     try {
       const imageParts = await Promise.all(
         debugImagePaths.map((path) => this.fileToGenerativePart(path))
       );
-      const prompt = `${
-        this.systemPrompt
-      }\n\nYou are Hindsight AI. Given:\n1. The original problem or situation: ${JSON.stringify(
-        problemInfo,
-        null,
-        2
-      )}\n2. The current response or approach: ${currentCode}\n3. The debug information in the provided images\n\nPlease analyze the debug information and provide feedback in this JSON format:\n{
-        "solution": {
-          "code": "The code or main answer here.",
-          "problem_statement": "Restate the problem or situation.",
-          "context": "Relevant background/context.",
-          "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
-          "reasoning": "Explanation of why these suggestions are appropriate."
-        }
-      }\nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`;
 
-      const result = await this.model.generateContent([prompt, ...imageParts]);
+      const prompt = `${this.systemPrompt}
+
+You are in a debugging session. Your task is to analyze new visual information (e.g., a screenshot of an error message or incorrect output) and provide a corrected solution based on the original problem and the user's previous attempt.
+
+**1. The Original Problem:**
+${JSON.stringify(problemInfo, null, 2)}
+
+**2. The User's Current (Incorrect) Code/Solution:**
+${currentCode}
+
+**3. New Debugging Information:**
+(Provided in the images attached to this prompt)
+
+**Your Task:**
+Analyze the new images to understand the error. Then, generate a corrected and complete solution.
+
+**Instructions for Your Response:**
+Your response MUST be a valid JSON object, following the exact same format as the initial solution generation.
+
+-   If the problem_type is **'coding'**, the "answer" field should contain ONLY the corrected raw code as a single-line JSON string. You must also provide the 'time_complexity' and 'space_complexity' in Big O notation.
+-   If the problem_type is **'multiple_choice'**, the "answer" string should be a Markdown-formatted string with the corrected choice and justification.
+-   If the problem_type is **'q_and_a'** or **'math'**, the "answer" string should be the corrected textual explanation.
+
+**CRITICAL RULE: All double quotes (") inside JSON string values MUST be escaped with a backslash (\\"). All newlines inside a string value must be escaped as \\n.**
+
+**JSON Response Format:**
+{
+  "solution": {
+    "answer": "The corrected solution content, following the rules above.",
+    "reasoning": "A high-level summary of what was wrong with the previous attempt and why this new solution is correct.",
+    "time_complexity": "For 'coding' problems, the Big O time complexity (e.g., 'O(n)'). For others, null.",
+    "space_complexity": "For 'coding' problems, the Big O space complexity (e.g., 'O(1)'). For others, null.",
+    "suggested_next_steps": ["A relevant follow-up action based on the fix.", "Another possible action."]
+  }
+}
+
+Important: Return ONLY the raw JSON object, without any markdown formatting or code blocks.`;
+
+      console.log("[LLMHelper] Calling Gemini LLM for debug solution...");
+      result = await this.model.generateContent([prompt, ...imageParts]);
       const response = result.response;
       const text = this.cleanJsonResponse(response.text());
+
+      if (!text) {
+        console.error(
+          "[LLMHelper] The debug API response did not contain a valid JSON object."
+        );
+        throw new Error("The API response was empty or malformed.");
+      }
+
       const parsed = JSON.parse(text);
       console.log("[LLMHelper] Parsed debug LLM response:", parsed);
+
+      // Apply the same post-processing as the original solution generator
+      if (problemInfo.problem_type === "coding" && parsed.solution?.answer) {
+        const language =
+          problemInfo.details?.language?.toLowerCase() || "python";
+        parsed.solution.answer = `\`\`\`${language}\n${parsed.solution.answer}\n\`\`\``;
+      }
+
       return parsed;
     } catch (error) {
-      console.error("Error debugging solution with images:", error);
+      console.error("Error in debugSolutionWithImages:", error);
+      if (result && result.response) {
+        console.error(
+          "[LLMHelper] Raw text that failed to parse:",
+          result.response.text()
+        );
+      }
       throw error;
     }
   }
@@ -216,7 +277,6 @@ Important: Return ONLY the raw JSON object, without any markdown formatting or c
       throw error;
     }
   }
-
   public async analyzeAudioFromBase64(data: string, mimeType: string) {
     try {
       const audioPart = {
@@ -235,7 +295,6 @@ Important: Return ONLY the raw JSON object, without any markdown formatting or c
       throw error;
     }
   }
-
   public async analyzeImageFile(imagePath: string) {
     try {
       const imageData = await fs.promises.readFile(imagePath);

@@ -109,7 +109,7 @@ export class WindowHelper {
 
     this.step = Math.floor(this.screenWidth / 10);
     this.currentX = 0;
-    this.mainWindow.setContentProtection(false);
+    this.mainWindow.setContentProtection(true);
 
     this.applyStealthSettings();
 
@@ -231,7 +231,7 @@ export class WindowHelper {
     }
 
     this.mainWindow.showInactive();
-    this.mainWindow.setContentProtection(false);
+    this.mainWindow.setContentProtection(true);
 
     this.applyStealthSettings();
     this.isWindowVisible = true;

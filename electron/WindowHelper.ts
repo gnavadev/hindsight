@@ -56,10 +56,13 @@ export class WindowHelper {
       maxWidth: undefined,
       x: this.currentX,
       y: 0,
+      type: "panel",
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, "preload.js"),
+        preload: isDev
+          ? path.join(__dirname, "../dist-electron/preload.js")
+          : path.join(__dirname, "preload.js"),
         experimentalFeatures: false,
         webSecurity: true,
         allowRunningInsecureContent: false,
@@ -72,7 +75,7 @@ export class WindowHelper {
       fullscreenable: false,
       hasShadow: false,
       backgroundColor: "#00000000",
-      focusable: false, // Changed to false for stealth
+      focusable: false,
       minimizable: false,
       maximizable: false,
       resizable: false,
@@ -84,8 +87,14 @@ export class WindowHelper {
       enableLargerThanScreen: true,
       opacity: 0.6,
     };
+
     this.mainWindow = new BrowserWindow(windowSettings);
 
+    this.mainWindow.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true
+    });
+    this.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
+    this.mainWindow.setContentProtection(true);
     this.mainWindow.webContents.on("did-finish-load", () => {
       const css = `
         *::-webkit-scrollbar { display: none !important; }
@@ -125,11 +134,10 @@ export class WindowHelper {
 
   private applyStealthSettings(): void {
     if (!this.mainWindow) return;
-
     this.mainWindow.setMenuBarVisibility(false);
     this.mainWindow.setSkipTaskbar(true);
-    this.mainWindow.setAlwaysOnTop(true);
-
+    this.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
+    this.mainWindow.setVisibleOnAllWorkspaces(true);
     this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
     if (process.platform === "darwin") {
@@ -137,7 +145,7 @@ export class WindowHelper {
         visibleOnFullScreen: true,
       });
       this.mainWindow.setHiddenInMissionControl(true);
-      this.mainWindow.setAlwaysOnTop(true, "floating");
+      this.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
     }
 
     if (process.platform === "linux") {

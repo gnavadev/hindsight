@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IoLogOutOutline } from "react-icons/io5";
-import { ThemeToggleButton, TooltipHelp } from "../../layout";
+import { ThemeToggleButton, TooltipHelp, AudioRecordButton } from "../../layout";
 import { useTheme } from "../../../contexts";
 
 interface QueueCommandsProps {
@@ -72,8 +72,12 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
         {/* Tooltip */}
         <TooltipHelp onTooltipVisibilityChange={onTooltipVisibilityChange || (() => {})} theme={theme}/>
 
+        {/* Audio Record Button */}
+        <AudioRecordButton />
+        
         {/* Theme Toggle */}
         <ThemeToggleButton />
+
 
         {/* Sign Out */}
         <button

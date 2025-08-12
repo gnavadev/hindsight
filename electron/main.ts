@@ -5,6 +5,7 @@ import { ScreenshotHelper } from "./ScreenshotHelper";
 import { ShortcutsHelper } from "./shortcuts";
 import { ProcessingHelper } from "./ProcessingHelper";
 import { NewSolutionData } from "../common/types/solutions";
+import { AudioHelper } from "./AudioHelper";
 
 export class AppState {
   private static instance: AppState | null = null;
@@ -13,6 +14,7 @@ export class AppState {
   private screenshotHelper: ScreenshotHelper;
   public shortcutsHelper: ShortcutsHelper;
   public processingHelper: ProcessingHelper;
+  public audioHelper: AudioHelper;
 
   // View management
   private view: "queue" | "solutions" = "queue";
@@ -45,6 +47,7 @@ export class AppState {
     this.screenshotHelper = new ScreenshotHelper(this.view);
     this.processingHelper = new ProcessingHelper(this);
     this.shortcutsHelper = new ShortcutsHelper(this);
+    this.audioHelper = new AudioHelper(this);
   }
 
   public static getInstance(): AppState {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { IoLogOutOutline } from "react-icons/io5";
 import { ThemeToggleButton, TooltipHelp } from "../../layout";
 import { useTheme } from "../../../contexts";
+import AudioRecordButton from "../../layout/AudioRecordButton";
 
 interface SolutionCommandsProps {
   extraScreenshots: Array<{ path: string; preview: string }>;
@@ -89,8 +90,13 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
           theme={theme}
         />
 
+
+        {/* Audio Record Button */}
+        <AudioRecordButton />
+        
         {/* Theme Toggle */}
         <ThemeToggleButton />
+
 
         {/* Sign Out */}
         <button

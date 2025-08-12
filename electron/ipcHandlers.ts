@@ -17,6 +17,14 @@ export function initializeIpcHandlers(appState: AppState): void {
     await appState.processingHelper.processScreenshots();
   });
 
+  ipcMain.on('start-system-audio-recording', () => {
+    appState.audioHelper.startRecording();
+  });
+
+  ipcMain.on('stop-system-audio-recording', () => {
+    appState.audioHelper.stopRecording();
+  });
+
   ipcMain.handle("delete-screenshot", async (event, path: string) => {
     return appState.deleteScreenshot(path);
   });

@@ -34,6 +34,8 @@ declare global {
       // CHANGE: Update the type definition for the callback data
       onSolutionSuccess: (callback: (data: NewSolutionData) => void) => () => void;
       onProblemExtracted: (callback: (data: NewProblemStatementData) => void) => () => void;
+      startSystemAudioRecording: () => void;
+      stopSystemAudioRecording: () => void;
 
       // DEBUG EVENTS
       // CHANGE: Update the type definition for the callback data

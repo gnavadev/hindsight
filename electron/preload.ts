@@ -1,18 +1,47 @@
 import { contextBridge, ipcRenderer } from "electron"
 
-// Types for the exposed Electron API
+// ---- Windows System Audio Recording (WASAPI Loopback via Chromium) ----
+let mediaRecorder: MediaRecorder | null = null;
+
+ipcRenderer.on('start-system-audio', async () => {
+  try {
+    const stream = await (navigator.mediaDevices as any).getDisplayMedia({
+      audio: true,
+      video: false
+    });
+
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+    mediaRecorder.ondataavailable = e => {
+      if (e.data.size > 0) {
+        e.data.arrayBuffer().then(buf => {
+          ipcRenderer.send('system-audio-data', Buffer.from(buf));
+        });
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      ipcRenderer.send('system-audio-stop');
+    };
+
+    mediaRecorder.start(1000); // send chunks every 1 second
+  } catch (err) {
+    console.error('Failed to start system audio capture:', err);
+  }
+});
+
+ipcRenderer.on('stop-system-audio', () => {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+});
+
+// ---- Types for the exposed Electron API ----
 interface ElectronAPI {
-  updateContentDimensions: (dimensions: {
-    width: number
-    height: number
-  }) => Promise<void>
+  updateContentDimensions: (dimensions: { width: number; height: number }) => Promise<void>
   getScreenshots: () => Promise<Array<{ path: string; preview: string }>>
-  deleteScreenshot: (
-    path: string
-  ) => Promise<{ success: boolean; error?: string }>
-  onScreenshotTaken: (
-    callback: (data: { path: string; preview: string }) => void
-  ) => () => void
+  deleteScreenshot: (path: string) => Promise<{ success: boolean; error?: string }>
+  onScreenshotTaken: (callback: (data: { path: string; preview: string }) => void) => () => void
   onSolutionsReady: (callback: (solutions: string) => void) => () => void
   onResetView: (callback: () => void) => () => void
   onSolutionStart: (callback: () => void) => () => void
@@ -22,7 +51,6 @@ interface ElectronAPI {
   onProcessingNoScreenshots: (callback: () => void) => () => void
   onProblemExtracted: (callback: (data: any) => void) => () => void
   onSolutionSuccess: (callback: (data: any) => void) => () => void
-
   onUnauthorized: (callback: () => void) => () => void
   onDebugError: (callback: (error: string) => void) => () => void
   takeScreenshot: () => Promise<void>
@@ -35,135 +63,90 @@ interface ElectronAPI {
 }
 
 export const PROCESSING_EVENTS = {
-  //global states
   UNAUTHORIZED: "procesing-unauthorized",
   NO_SCREENSHOTS: "processing-no-screenshots",
-
-  //states for generating the initial solution
   INITIAL_START: "initial-start",
   PROBLEM_EXTRACTED: "problem-extracted",
   SOLUTION_SUCCESS: "solution-success",
   INITIAL_SOLUTION_ERROR: "solution-error",
-
-  //states for processing the debugging
   DEBUG_START: "debug-start",
   DEBUG_SUCCESS: "debug-success",
   DEBUG_ERROR: "debug-error"
 } as const
 
-// Expose the Electron API to the renderer process
+// ---- Expose the Electron API ----
 contextBridge.exposeInMainWorld("electronAPI", {
-  updateContentDimensions: (dimensions: { width: number; height: number }) =>
-    ipcRenderer.invoke("update-content-dimensions", dimensions),
+  updateContentDimensions: (dimensions) => ipcRenderer.invoke("update-content-dimensions", dimensions),
   takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
   getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
-  deleteScreenshot: (path: string) =>
-    ipcRenderer.invoke("delete-screenshot", path),
+  deleteScreenshot: (path) => ipcRenderer.invoke("delete-screenshot", path),
 
-  // Event listeners
-  onScreenshotTaken: (
-    callback: (data: { path: string; preview: string }) => void
-  ) => {
-    const subscription = (_: any, data: { path: string; preview: string }) =>
-      callback(data)
+  startSystemAudioRecording: () => ipcRenderer.send('start-system-audio-recording'),
+  stopSystemAudioRecording: () => ipcRenderer.send('stop-system-audio-recording'),
+
+  onScreenshotTaken: (callback) => {
+    const subscription = (_: any, data: { path: string; preview: string }) => callback(data)
     ipcRenderer.on("screenshot-taken", subscription)
-    return () => {
-      ipcRenderer.removeListener("screenshot-taken", subscription)
-    }
+    return () => ipcRenderer.removeListener("screenshot-taken", subscription)
   },
-  onSolutionsReady: (callback: (solutions: string) => void) => {
+  onSolutionsReady: (callback) => {
     const subscription = (_: any, solutions: string) => callback(solutions)
     ipcRenderer.on("solutions-ready", subscription)
-    return () => {
-      ipcRenderer.removeListener("solutions-ready", subscription)
-    }
+    return () => ipcRenderer.removeListener("solutions-ready", subscription)
   },
-  onResetView: (callback: () => void) => {
+  onResetView: (callback) => {
     const subscription = () => callback()
     ipcRenderer.on("reset-view", subscription)
-    return () => {
-      ipcRenderer.removeListener("reset-view", subscription)
-    }
+    return () => ipcRenderer.removeListener("reset-view", subscription)
   },
-  onSolutionStart: (callback: () => void) => {
+  onSolutionStart: (callback) => {
     const subscription = () => callback()
     ipcRenderer.on(PROCESSING_EVENTS.INITIAL_START, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.INITIAL_START, subscription)
-    }
+    return () => ipcRenderer.removeListener(PROCESSING_EVENTS.INITIAL_START, subscription)
   },
-  onDebugStart: (callback: () => void) => {
+  onDebugStart: (callback) => {
     const subscription = () => callback()
     ipcRenderer.on(PROCESSING_EVENTS.DEBUG_START, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.DEBUG_START, subscription)
-    }
+    return () => ipcRenderer.removeListener(PROCESSING_EVENTS.DEBUG_START, subscription)
   },
-
-  onDebugSuccess: (callback: (data: any) => void) => {
+  onDebugSuccess: (callback) => {
     ipcRenderer.on("debug-success", (_event, data) => callback(data))
-    return () => {
-      ipcRenderer.removeListener("debug-success", (_event, data) =>
-        callback(data)
-      )
-    }
+    return () => ipcRenderer.removeListener("debug-success", (_event, data) => callback(data))
   },
-  onDebugError: (callback: (error: string) => void) => {
+  onDebugError: (callback) => {
     const subscription = (_: any, error: string) => callback(error)
     ipcRenderer.on(PROCESSING_EVENTS.DEBUG_ERROR, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.DEBUG_ERROR, subscription)
-    }
+    return () => ipcRenderer.removeListener(PROCESSING_EVENTS.DEBUG_ERROR, subscription)
   },
-  onSolutionError: (callback: (error: string) => void) => {
+  onSolutionError: (callback) => {
     const subscription = (_: any, error: string) => callback(error)
     ipcRenderer.on(PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR, subscription)
-    return () => {
-      ipcRenderer.removeListener(
-        PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
-        subscription
-      )
-    }
+    return () => ipcRenderer.removeListener(PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR, subscription)
   },
-  onProcessingNoScreenshots: (callback: () => void) => {
+  onProcessingNoScreenshots: (callback) => {
     const subscription = () => callback()
     ipcRenderer.on(PROCESSING_EVENTS.NO_SCREENSHOTS, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.NO_SCREENSHOTS, subscription)
-    }
+    return () => ipcRenderer.removeListener(PROCESSING_EVENTS.NO_SCREENSHOTS, subscription)
   },
-
-  onProblemExtracted: (callback: (data: any) => void) => {
+  onProblemExtracted: (callback) => {
     const subscription = (_: any, data: any) => callback(data)
     ipcRenderer.on(PROCESSING_EVENTS.PROBLEM_EXTRACTED, subscription)
-    return () => {
-      ipcRenderer.removeListener(
-        PROCESSING_EVENTS.PROBLEM_EXTRACTED,
-        subscription
-      )
-    }
+    return () => ipcRenderer.removeListener(PROCESSING_EVENTS.PROBLEM_EXTRACTED, subscription)
   },
-  onSolutionSuccess: (callback: (data: any) => void) => {
+  onSolutionSuccess: (callback) => {
     const subscription = (_: any, data: any) => callback(data)
     ipcRenderer.on(PROCESSING_EVENTS.SOLUTION_SUCCESS, subscription)
-    return () => {
-      ipcRenderer.removeListener(
-        PROCESSING_EVENTS.SOLUTION_SUCCESS,
-        subscription
-      )
-    }
+    return () => ipcRenderer.removeListener(PROCESSING_EVENTS.SOLUTION_SUCCESS, subscription)
   },
-  onUnauthorized: (callback: () => void) => {
+  onUnauthorized: (callback) => {
     const subscription = () => callback()
     ipcRenderer.on(PROCESSING_EVENTS.UNAUTHORIZED, subscription)
-    return () => {
-      ipcRenderer.removeListener(PROCESSING_EVENTS.UNAUTHORIZED, subscription)
-    }
+    return () => ipcRenderer.removeListener(PROCESSING_EVENTS.UNAUTHORIZED, subscription)
   },
   moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
   moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
-  analyzeAudioFromBase64: (data: string, mimeType: string) => ipcRenderer.invoke("analyze-audio-base64", data, mimeType),
-  analyzeAudioFile: (path: string) => ipcRenderer.invoke("analyze-audio-file", path),
-  analyzeImageFile: (path: string) => ipcRenderer.invoke("analyze-image-file", path),
+  analyzeAudioFromBase64: (data, mimeType) => ipcRenderer.invoke("analyze-audio-base64", data, mimeType),
+  analyzeAudioFile: (path) => ipcRenderer.invoke("analyze-audio-file", path),
+  analyzeImageFile: (path) => ipcRenderer.invoke("analyze-image-file", path),
   quitApp: () => ipcRenderer.invoke("quit-app")
 } as ElectronAPI)

@@ -1,6 +1,6 @@
 // ipcHandlers.ts
 
-import { ipcMain, app } from "electron";
+import { ipcMain, app, clipboard } from "electron";
 import { AppState } from "./main";
 
 export function initializeIpcHandlers(appState: AppState): void {
@@ -19,6 +19,11 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   ipcMain.handle("delete-screenshot", async (event, path: string) => {
     return appState.deleteScreenshot(path);
+  });
+
+  ipcMain.handle('copy-text', (event, text) => {
+    clipboard.writeText(text);
+    return { success: true };
   });
 
   ipcMain.handle("take-screenshot", async () => {

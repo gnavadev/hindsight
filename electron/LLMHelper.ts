@@ -11,8 +11,39 @@ export class LLMHelper {
   For any user input, you will first analyze and classify the problem, then provide a structured and actionable solution.`;
   constructor(apiKey: string) {
     const genAI = new GoogleGenerativeAI(apiKey);
-    this.model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-    // this.model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    this.model = genAI.getGenerativeModel({
+      // model: "gemini-2.5-pro",
+      model: "gemini-2.5-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
+  }
+
+  // Add this new private method to your LLMHelper class
+  private async _analyzeDebugError(
+    incorrectCode: string,
+    errorImageParts: any[] // Pass the generated image parts here
+  ): Promise<string> {
+    // A simple, non-JSON prompt focused ONLY on analysis.
+    const analysisPrompt = `You are a senior debugging expert.
+Analyze the provided code and the error message in the attached image.
+In one or two sentences, describe the specific error and what needs to be changed in the code to fix it.
+Do NOT write the corrected code. Only provide your plain-text analysis.
+
+INCORRECT CODE:
+---
+${incorrectCode}
+---
+`;
+
+    console.log("[LLMHelper] Calling Gemini LLM for error analysis...");
+    const result = await this.model.generateContent([
+      analysisPrompt,
+      ...errorImageParts,
+    ]);
+
+    return result.response.text();
   }
 
   private async fileToGenerativePart(imagePath: string) {
@@ -26,11 +57,19 @@ export class LLMHelper {
   }
 
   private cleanJsonResponse(text: string): string {
-    // Remove markdown code block syntax if present
-    text = text.replace(/^```(?:json)?\n/, "").replace(/\n```$/, "");
-    // Remove any leading/trailing whitespace
-    text = text.trim();
-    return text;
+    const firstBracket = text.indexOf("{");
+    const lastBracket = text.lastIndexOf("}");
+
+    if (
+      firstBracket === -1 ||
+      lastBracket === -1 ||
+      lastBracket < firstBracket
+    ) {
+      console.error("Could not find a valid JSON object in the response text.");
+      return text;
+    }
+
+    return text.substring(firstBracket, lastBracket + 1);
   }
 
   public async extractProblemFromImages(imagePaths: string[]) {
@@ -39,17 +78,15 @@ export class LLMHelper {
         imagePaths.map((path) => this.fileToGenerativePart(path))
       );
 
-      // This prompt is now a powerful, multi-purpose extractor.
       const prompt = `${this.systemPrompt}\n\nAnalyze the user-provided image(s) and perform two steps:
 1.  **Classify the Problem**: Determine the type of problem. It must be one of: 'coding', 'multiple_choice', 'q_and_a', 'general_reasoning', 'math'.
-2.  **Extract Details**: Based on the classification, extract the relevant information into the correct JSON structure.
+2.  **Extract Details**: Based on the classification, extract the relevant information into the correct JSON structure as shown in the examples.
 
-Your final output MUST be a single JSON object formatted according to the examples below.
+Your output will be a single JSON object.
 
 **JSON FORMAT EXAMPLES:**
 
 * **For 'coding'**:
-    \`\`\`json
     {
       "problem_type": "coding",
       "problem_statement": "A summary of the coding task or error.",
@@ -59,10 +96,8 @@ Your final output MUST be a single JSON object formatted according to the exampl
         "error_message": "Any error message shown, if applicable."
       }
     }
-    \`\`\`
 
 * **For 'multiple_choice'**:
-    \`\`\`json
     {
       "problem_type": "multiple_choice",
       "problem_statement": "A summary of the quiz topic.",
@@ -75,10 +110,8 @@ Your final output MUST be a single JSON object formatted according to the exampl
         ]
       }
     }
-    \`\`\`
 
 * **For 'q_and_a' or 'math'**:
-    \`\`\`json
     {
       "problem_type": "q_and_a",
       "problem_statement": "The user's primary question.",
@@ -87,57 +120,50 @@ Your final output MUST be a single JSON object formatted according to the exampl
         "context": "Any surrounding text or data needed to answer."
       }
     }
-    \`\`\`
-
-Important: Return ONLY the raw JSON object, without any markdown formatting, code blocks, or extraneous text.`;
+`;
 
       const result = await this.model.generateContent([prompt, ...imageParts]);
-      const response = result.response;
-      const text = this.cleanJsonResponse(response.text());
-      return JSON.parse(text);
+
+      const rawText = result.response.text();
+      const cleanText = this.cleanJsonResponse(rawText);
+      return JSON.parse(cleanText);
     } catch (error) {
       console.error("Error extracting problem from images:", error);
       throw error;
     }
   }
+
   public async generateSolution(problemInfo: any) {
     const prompt = `${
       this.systemPrompt
-    }\n\nBased on the following classified problem, generate a helpful solution.
+    }\n\nBased on the following classified problem, generate a helpful solution in the specified JSON format.
+
 The problem type is: **${problemInfo.problem_type}**
 
 **Problem Details:**
 ${JSON.stringify(problemInfo, null, 2)}
 
-**Instructions for Your Response:**
-Your response MUST be a valid JSON object.
-
--   If the problem_type is **'coding'**, the "answer" field should contain ONLY the raw code as a single-line JSON string. You must also provide the 'time_complexity' and 'space_complexity' in Big O notation.
--   If the problem_type is **'multiple_choice'**, the "answer" string should be a Markdown-formatted string. For each question, use a heading (e.g., '### Question 1'), and then on new lines, use the format: "**Correct Answer:** [The Answer]" and "**Justification:** [The Explanation]".
--   If the problem_type is **'q_and_a'** or **'math'**, the "answer" string should be a clear, well-formatted textual explanation.
-
-**CRITICAL RULE: All double quotes (") inside JSON string values MUST be escaped with a backslash (\\"). All newlines inside a string value must be escaped as \\n.**
+**Instructions for Your Response Content:**
+-   If the problem_type is **'coding'**, the "answer" field should contain only the complete, raw code. Your priorities for the code are: 1-correctness, 2-efficiency, 3-clarity(Cyclomatic Complexity). Also provide 'time_complexity' and 'space_complexity' in Big O notation.
+-   If the problem_type is **'multiple_choice'**, the "answer" field should be a Markdown-formatted string. For each question, use a heading (e.g., '### Question 1'), and then on new lines, use the format: "**Correct Answer:** [The Answer]" and "**Justification:** [The Explanation]".
+-   If the problem_type is **'q_and_a'** or **'math'**, the "answer" field should be a clear, well-formatted textual explanation.
 
 **JSON Response Format:**
 {
   "solution": {
     "answer": "The solution content, following the rules above.",
-    "reasoning": "A high-level, summary of the overall approach taken, explaining the reasoning behind every decision.",
+    "reasoning": "A high-level summary of the overall approach taken, explaining the reasoning behind every decision.",
     "time_complexity": "For 'coding' problems, the Big O time complexity (e.g., 'O(n)'). For others, null.",
     "space_complexity": "For 'coding' problems, the Big O space complexity (e.g., 'O(1)'). For others, null.",
     "suggested_next_steps": ["A relevant follow-up action.", "Another possible action."]
   }
 }
-
-Important: Return ONLY the raw JSON object, without any markdown formatting or code blocks.`;
-
+`;
     let result: any;
     console.log("[LLMHelper] Calling Gemini LLM for solution...");
     try {
       result = await this.model.generateContent(prompt);
-      const response = result.response;
-
-      const text = this.cleanJsonResponse(response.text());
+      const text = this.cleanJsonResponse(result.response.text());
 
       if (!text) {
         console.error(
@@ -148,11 +174,6 @@ Important: Return ONLY the raw JSON object, without any markdown formatting or c
       const parsed = JSON.parse(text);
       console.log("[LLMHelper] Parsed LLM response:", parsed);
 
-      if (problemInfo.problem_type === "coding" && parsed.solution?.answer) {
-        const language =
-          problemInfo.details?.language?.toLowerCase() || "python";
-        parsed.solution.answer = `\`\`\`${language}\n${parsed.solution.answer}\n\`\`\``;
-      }
       return parsed;
     } catch (error) {
       console.error("[LLMHelper] Error in generateSolution:", error);
@@ -174,71 +195,67 @@ Important: Return ONLY the raw JSON object, without any markdown formatting or c
    * @param debugImagePaths Paths to new images showing the error or issue.
    * @returns A new solution object in the same format as `generateSolution`.
    */
+  // Replace the existing debugSolutionWithImages with this new version.
   public async debugSolutionWithImages(
     problemInfo: any,
     currentCode: string,
     debugImagePaths: string[]
   ) {
-    let result: any;
     try {
       const imageParts = await Promise.all(
         debugImagePaths.map((path) => this.fileToGenerativePart(path))
       );
 
-      const prompt = `${this.systemPrompt}
+      const errorAnalysis = await this._analyzeDebugError(
+        currentCode,
+        imageParts
+      );
+      console.log("[LLMHelper] Received error analysis:", errorAnalysis);
 
-You are in a debugging session. Your task is to analyze new visual information (e.g., a screenshot of an error message or incorrect output) and provide a corrected solution based on the original problem and the user's previous attempt.
+      if (!errorAnalysis || errorAnalysis.trim() === "") {
+        throw new Error(
+          "The analysis step failed to produce a description of the error."
+        );
+      }
+
+      const synthesisPrompt = `${this.systemPrompt}
+
+You are a code synthesis expert. Your task is to write corrected code based on a provided analysis.
 
 **1. The Original Problem:**
 ${JSON.stringify(problemInfo, null, 2)}
 
-**2. The User's Current (Incorrect) Code/Solution:**
+**2. The User's INCORRECT Code:**
 ${currentCode}
 
-**3. New Debugging Information:**
-(Provided in the images attached to this prompt)
+**3. REQUIRED FIX (Analysis of the error):**
+${errorAnalysis}
 
-**Your Task:**
-Analyze the new images to understand the error. Then, generate a corrected and complete solution.
-
-**Instructions for Your Response:**
-Your response MUST be a valid JSON object, following the exact same format as the initial solution generation.
-
--   If the problem_type is **'coding'**, the "answer" field should contain ONLY the corrected raw code as a single-line JSON string. You must also provide the 'time_complexity' and 'space_complexity' in Big O notation.
--   If the problem_type is **'multiple_choice'**, the "answer" string should be a Markdown-formatted string with the corrected choice and justification.
--   If the problem_type is **'q_and_a'** or **'math'**, the "answer" string should be the corrected textual explanation.
-
-**CRITICAL RULE: All double quotes (") inside JSON string values MUST be escaped with a backslash (\\"). All newlines inside a string value must be escaped as \\n.**
+---
+**YOUR TASK:**
+Write NEW code that implements the "REQUIRED FIX".
+- The "answer" field must contain ONLY the raw corrected code.
+- Use the provided "REQUIRED FIX" analysis as the "reasoning" for your solution.
 
 **JSON Response Format:**
 {
   "solution": {
-    "answer": "The corrected solution content, following the rules above.",
-    "reasoning": "A high-level summary of what was wrong with the previous attempt and why this new solution is correct.",
-    "time_complexity": "For 'coding' problems, the Big O time complexity (e.g., 'O(n)'). For others, null.",
-    "space_complexity": "For 'coding' problems, the Big O space complexity (e.g., 'O(1)'). For others, null.",
-    "suggested_next_steps": ["A relevant follow-up action based on the fix.", "Another possible action."]
+    "answer": "The raw corrected code. No markdown.",
+    "reasoning": "${errorAnalysis.replace(/"/g, '\\"')}",
+    "time_complexity": "The Big O time complexity for your corrected code.",
+    "space_complexity": "The Big O space complexity for your corrected code.",
+    "suggested_next_steps": ["A relevant follow-up action based on the fix."]
   }
 }
+`;
 
-Important: Return ONLY the raw JSON object, without any markdown formatting or code blocks.`;
+      console.log("[LLMHelper] Calling Gemini LLM for code synthesis...");
+      const result = await this.model.generateContent(synthesisPrompt);
+      const cleanText = this.cleanJsonResponse(result.response.text());
+      const parsed = JSON.parse(cleanText);
 
-      console.log("[LLMHelper] Calling Gemini LLM for debug solution...");
-      result = await this.model.generateContent([prompt, ...imageParts]);
-      const response = result.response;
-      const text = this.cleanJsonResponse(response.text());
-
-      if (!text) {
-        console.error(
-          "[LLMHelper] The debug API response did not contain a valid JSON object."
-        );
-        throw new Error("The API response was empty or malformed.");
-      }
-
-      const parsed = JSON.parse(text);
       console.log("[LLMHelper] Parsed debug LLM response:", parsed);
 
-      // Apply the same post-processing as the original solution generator
       if (problemInfo.problem_type === "coding" && parsed.solution?.answer) {
         const language =
           problemInfo.details?.language?.toLowerCase() || "python";
@@ -248,16 +265,9 @@ Important: Return ONLY the raw JSON object, without any markdown formatting or c
       return parsed;
     } catch (error) {
       console.error("Error in debugSolutionWithImages:", error);
-      if (result && result.response) {
-        console.error(
-          "[LLMHelper] Raw text that failed to parse:",
-          result.response.text()
-        );
-      }
       throw error;
     }
   }
-
   public async analyzeAudioFile(audioPath: string) {
     try {
       const audioData = await fs.promises.readFile(audioPath);

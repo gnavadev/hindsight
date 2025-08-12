@@ -85,10 +85,11 @@ export class WindowHelper {
       acceptFirstMouse: false,
       disableAutoHideCursor: true,
       enableLargerThanScreen: true,
-      opacity: 0.6,
+      opacity: 0.7,
     };
 
     this.mainWindow = new BrowserWindow(windowSettings);
+    // this.mainWindow.webContents.openDevTools({ mode: "detach" });
 
     this.mainWindow.setVisibleOnAllWorkspaces(true, {
       visibleOnFullScreen: true
@@ -187,7 +188,7 @@ export class WindowHelper {
     });
   }
 
-  public enableMouseEventsTemporary(duration: number = 5000): void {
+  public enableMouseEventsTemporary(duration: number = 20000): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
 
     this.mainWindow.setIgnoreMouseEvents(false);

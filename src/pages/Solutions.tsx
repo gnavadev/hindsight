@@ -145,26 +145,17 @@ const SolutionSection = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (typeof content === "string") {
-      const cleanedCode = content
-        .replace(/^(```|""")\w*\n?/, "")
-        .replace(/\n?(```|""")$/, "")
-        .trim();
-      navigator.clipboard.writeText(cleanedCode).then(() => {
+      try {
+        await window.electronAPI.copyText(content);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-      });
+      } catch (err) {
+        console.error("Electron clipboard copy failed:", err);
+      }
     }
   };
-
-  const cleanedCode =
-    typeof content === "string"
-      ? content
-          .replace(/^(```|""")\w*\n?/, "")
-          .replace(/\n?(```|""")$/, "")
-          .trim()
-      : "";
 
   return (
     <div className="space-y-2 relative">
@@ -191,12 +182,6 @@ const SolutionSection = ({
         </div>
       ) : (
         <div className="w-full relative">
-          <button
-            onClick={copyToClipboard}
-            className="absolute top-2 right-2 text-xs text-white bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition z-10"
-          >
-            {copied ? "Copied!" : "Copy"}
-          </button>
           <SyntaxHighlighter
             showLineNumbers
             language={language.toLowerCase()}
@@ -213,8 +198,14 @@ const SolutionSection = ({
             }}
             wrapLongLines={true}
           >
-            {cleanedCode}
+            {content}
           </SyntaxHighlighter>
+          <button
+            onClick={copyToClipboard}
+            className="absolute top-2 right-2 text-xs text-white bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition z-10"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
         </div>
       )}
     </div>

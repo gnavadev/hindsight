@@ -57,6 +57,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-content-dimensions", dimensions),
   takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
   getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
+  copyText: (text : string) => ipcRenderer.invoke('copy-text', text),
   deleteScreenshot: (path: string) =>
     ipcRenderer.invoke("delete-screenshot", path),
 

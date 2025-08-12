@@ -30,7 +30,7 @@ const TooltipHelp: React.FC<TooltipHelpProps> = ({ onTooltipVisibilityChange, th
   const keybindClasses = theme === 'osrs' ? "osrs-toolbar-btn" : "bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none";
   const descClasses = theme === 'osrs' ? "text-[14px] leading-relaxed text-white/70" : "text-[10px] leading-relaxed text-white/70";
   const tooltipButtonClasses = theme === 'osrs' 
-    ? "osrs-toolbar-btn" 
+    ? "osrs-toolbar-btn cursor-help" 
     : "w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors flex items-center justify-center cursor-help z-10";
 
   return (

@@ -65,7 +65,6 @@ export const OSRSTheme = () => (
       font-size: 0.75rem;
       box-shadow: inset 0 1px 0 #e3d3a4; /* highlight */
       text-shadow: 2px 1px 1px #000000;  
-      cursor: help;
     }
 
     /* Toolbar container background */

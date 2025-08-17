@@ -12,8 +12,8 @@ export class LLMHelper {
   constructor(apiKey: string) {
     const genAI = new GoogleGenerativeAI(apiKey);
     this.model = genAI.getGenerativeModel({
-      // model: "gemini-2.5-pro",
       model: "gemini-2.5-flash-lite",
+      // model: "gemini-2.5-pro",
       generationConfig: {
         responseMimeType: "application/json",
       },
@@ -57,6 +57,8 @@ ${incorrectCode}
   }
 
   private cleanJsonResponse(text: string): string {
+    // This helper function attempts to extract a JSON object from a string
+    // that might be wrapped in markdown backticks or other text.
     const firstBracket = text.indexOf("{");
     const lastBracket = text.lastIndexOf("}");
 
@@ -66,19 +68,15 @@ ${incorrectCode}
       lastBracket < firstBracket
     ) {
       console.error("Could not find a valid JSON object in the response text.");
-      return text;
+      return ""; // Return empty string if no object found
     }
 
     return text.substring(firstBracket, lastBracket + 1);
   }
 
   public async extractProblemFromImages(imagePaths: string[]) {
-    try {
-      const imageParts = await Promise.all(
-        imagePaths.map((path) => this.fileToGenerativePart(path))
-      );
-
-      const prompt = `${this.systemPrompt}\n\nAnalyze the user-provided image(s) and perform two steps:
+    // ... (prompt definition is the same as before) ...
+    const prompt = `${this.systemPrompt}\n\nAnalyze the user-provided image(s) and perform two steps:
 1.  **Classify the Problem**: Determine the type of problem. It must be one of: 'coding', 'multiple_choice', 'q_and_a', 'general_reasoning', 'math'.
 2.  **Extract Details**: Based on the classification, extract the relevant information into the correct JSON structure as shown in the examples.
 
@@ -122,11 +120,29 @@ Your output will be a single JSON object.
     }
 `;
 
-      const result = await this.model.generateContent([prompt, ...imageParts]);
+    try {
+      const imageParts = await Promise.all(
+        imagePaths.map((path) => this.fileToGenerativePart(path))
+      );
 
+      const result = await this.model.generateContent([prompt, ...imageParts]);
       const rawText = result.response.text();
       const cleanText = this.cleanJsonResponse(rawText);
-      return JSON.parse(cleanText);
+      
+      // --- FIX START ---
+      if (!cleanText) {
+          throw new Error("Could not extract a JSON object from the LLM response.");
+      }
+      
+      try {
+          return JSON.parse(cleanText);
+      } catch (parseError) {
+          console.error("[LLMHelper] Failed to parse JSON response in extractProblemFromImages.");
+          console.error("[LLMHelper] Raw text that failed:", rawText);
+          throw new Error("The LLM response was not valid JSON.");
+      }
+      // --- FIX END ---
+      
     } catch (error) {
       console.error("Error extracting problem from images:", error);
       throw error;
@@ -134,6 +150,7 @@ Your output will be a single JSON object.
   }
 
   public async generateSolution(problemInfo: any) {
+    // ... (prompt definition is the same as before) ...
     const prompt = `${
       this.systemPrompt
     }\n\nBased on the following classified problem, generate a helpful solution in the specified JSON format.
@@ -142,6 +159,8 @@ The problem type is: **${problemInfo.problem_type}**
 
 **Problem Details:**
 ${JSON.stringify(problemInfo, null, 2)}
+
+**IMPORTANT RULE FOR YOUR RESPONSE:** Your entire response must be a single, raw JSON object. Use only standard ASCII characters. For example, use "!=" instead of "≠" and use single quotes "'" instead of special quote characters.
 
 **Instructions for Your Response Content:**
 -   If the problem_type is **'coding'**, the "answer" field should contain only the complete, raw code. Your priorities for the code are: 1-correctness, 2-efficiency, 3-clarity(Cyclomatic Complexity). Also provide 'time_complexity' and 'space_complexity' in Big O notation.
@@ -159,48 +178,41 @@ ${JSON.stringify(problemInfo, null, 2)}
   }
 }
 `;
-    let result: any;
+    let rawText = "";
     console.log("[LLMHelper] Calling Gemini LLM for solution...");
     try {
-      result = await this.model.generateContent(prompt);
-      const text = this.cleanJsonResponse(result.response.text());
+      const result = await this.model.generateContent(prompt);
+      rawText = result.response.text(); // Store raw text for potential error logging
+      const cleanText = this.cleanJsonResponse(rawText);
 
-      if (!text) {
-        console.error(
-          "[LLMHelper] The API response did not contain a valid JSON object."
-        );
-        throw new Error("The API response was empty or malformed.");
+      // --- FIX START ---
+      if (!cleanText) {
+          throw new Error("Could not extract a JSON object from the LLM response.");
       }
-      const parsed = JSON.parse(text);
-      console.log("[LLMHelper] Parsed LLM response:", parsed);
 
-      return parsed;
+      try {
+        const parsed = JSON.parse(cleanText);
+        console.log("[LLMHelper] Parsed LLM response:", parsed);
+        return parsed;
+      } catch (parseError) {
+        console.error("[LLMHelper] Failed to parse JSON response in generateSolution.");
+        console.error("[LLMHelper] Raw text that failed:", rawText);
+        throw new Error("The LLM response was not valid JSON.");
+      }
+      // --- FIX END ---
     } catch (error) {
       console.error("[LLMHelper] Error in generateSolution:", error);
-      if (result && result.response) {
-        console.error(
-          "[LLMHelper] Raw text that failed to parse:",
-          result.response.text()
-        );
-      }
+      // We already logged the raw text inside the parsing catch block if it got that far
       throw error;
     }
   }
 
-  /**
-   * Analyzes new images (e.g., error messages) to correct a previous solution.
-   *
-   * @param problemInfo The original problem classification from `extractProblemFromImages`.
-   * @param currentCode The user's current, potentially incorrect, code or solution text.
-   * @param debugImagePaths Paths to new images showing the error or issue.
-   * @returns A new solution object in the same format as `generateSolution`.
-   */
-  // Replace the existing debugSolutionWithImages with this new version.
   public async debugSolutionWithImages(
     problemInfo: any,
     currentCode: string,
     debugImagePaths: string[]
   ) {
+    // ... (logic and prompt definition are the same as before) ...
     try {
       const imageParts = await Promise.all(
         debugImagePaths.map((path) => this.fileToGenerativePart(path))
@@ -251,9 +263,24 @@ Write NEW code that implements the "REQUIRED FIX".
 
       console.log("[LLMHelper] Calling Gemini LLM for code synthesis...");
       const result = await this.model.generateContent(synthesisPrompt);
-      const cleanText = this.cleanJsonResponse(result.response.text());
-      const parsed = JSON.parse(cleanText);
-
+      const rawText = result.response.text();
+      const cleanText = this.cleanJsonResponse(rawText);
+      
+      // --- FIX START ---
+      let parsed;
+      if (!cleanText) {
+          throw new Error("Could not extract a JSON object from the LLM response.");
+      }
+      
+      try {
+          parsed = JSON.parse(cleanText);
+      } catch (parseError) {
+          console.error("[LLMHelper] Failed to parse JSON response in debugSolutionWithImages.");
+          console.error("[LLMHelper] Raw text that failed:", rawText);
+          throw new Error("The LLM response was not valid JSON.");
+      }
+      // --- FIX END ---
+      
       console.log("[LLMHelper] Parsed debug LLM response:", parsed);
 
       if (problemInfo.problem_type === "coding" && parsed.solution?.answer) {
@@ -268,6 +295,8 @@ Write NEW code that implements the "REQUIRED FIX".
       throw error;
     }
   }
+
+  // No changes needed for the methods below
   public async analyzeAudioFile(audioPath: string) {
     try {
       const audioData = await fs.promises.readFile(audioPath);

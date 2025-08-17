@@ -50,9 +50,11 @@ export class ProcessingHelper {
     const view = this.appState.getView();
 
     if (view === "queue") {
+      // --- Initial Processing Flow ---
       const screenshotQueue = this.appState
         .getScreenshotHelper()
         .getScreenshotQueue();
+
       if (screenshotQueue.length === 0) {
         mainWindow.webContents.send(
           this.appState.PROCESSING_EVENTS.NO_SCREENSHOTS
@@ -92,18 +94,21 @@ export class ProcessingHelper {
         );
       } catch (error: any) {
         console.error("Error during initial processing:", error);
+
+        // --- CHANGE: Send a user-friendly message instead of the raw error ---
         mainWindow.webContents.send(
           this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
-          error.message
+          "The AI returned an invalid response. Please try again."
         );
       } finally {
         this.currentProcessingAbortController = null;
       }
     } else {
-      // Debug flow
+      // --- Debug Flow ---
       const extraScreenshotQueue = this.appState
         .getScreenshotHelper()
         .getExtraScreenshotQueue();
+
       if (extraScreenshotQueue.length === 0) {
         mainWindow.webContents.send(
           this.appState.PROCESSING_EVENTS.NO_SCREENSHOTS
@@ -138,13 +143,14 @@ export class ProcessingHelper {
           debugResult
         );
 
-        // --- ADD THIS LINE ---
         await this.appState.getScreenshotHelper().clearExtraQueueFiles();
       } catch (error: any) {
         console.error("Debug processing error:", error);
+
+        // --- CHANGE: Send a user-friendly message for debug errors as well ---
         mainWindow.webContents.send(
           this.appState.PROCESSING_EVENTS.DEBUG_ERROR,
-          error.message
+          "The AI returned an invalid response during debug. Please try again."
         );
       } finally {
         this.currentExtraProcessingAbortController = null;

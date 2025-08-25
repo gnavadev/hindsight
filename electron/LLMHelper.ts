@@ -12,8 +12,8 @@ export class LLMHelper {
   constructor(apiKey: string) {
     const genAI = new GoogleGenerativeAI(apiKey);
     this.model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-lite",
-      // model: "gemini-2.5-pro",
+      // model: "gemini-2.5-flash-lite",
+      model: "gemini-2.5-pro",
       generationConfig: {
         responseMimeType: "application/json",
       },
@@ -28,7 +28,7 @@ export class LLMHelper {
     // A simple, non-JSON prompt focused ONLY on analysis.
     const analysisPrompt = `You are a senior debugging expert.
 Analyze the provided code and the error message in the attached image.
-In one or two sentences, describe the specific error and what needs to be changed in the code to fix it.
+Describe the specific error and what needs to be changed in the code to fix it, be concise and direct.
 Do NOT write the corrected code. Only provide your plain-text analysis.
 
 INCORRECT CODE:
@@ -76,7 +76,7 @@ ${incorrectCode}
 
   public async extractProblemFromImages(imagePaths: string[]) {
     // ... (prompt definition is the same as before) ...
-    const prompt = `${this.systemPrompt}\n\nAnalyze the user-provided image(s) and perform two steps:
+    const prompt = `${this.systemPrompt}\n\nSynthesize the information from all of the user-provided image(s) into a single, cohesive problem description. and perform two steps:
 1.  **Classify the Problem**: Determine the type of problem. It must be one of: 'coding', 'multiple_choice', 'q_and_a', 'general_reasoning', 'math'.
 2.  **Extract Details**: Based on the classification, extract the relevant information into the correct JSON structure as shown in the examples.
 

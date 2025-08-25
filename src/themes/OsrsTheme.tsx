@@ -47,8 +47,10 @@ export const OSRSTheme = () => (
       border-radius: 4px;
     }
     .osrs-mcq-block h3 {
-      color: #000;
-      font-weight: bold;
+      color: #FF0000;
+      font-write: bold;
+      text-shadow: none;
+      font-size: 18px;
     }
     .osrs-mcq-block p {
       color:  #ffff11;

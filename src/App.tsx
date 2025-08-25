@@ -24,6 +24,7 @@ declare global {
       onProcessingNoScreenshots: (callback: () => void) => () => void;
       onResetView: (callback: () => void) => () => void;
       takeScreenshot: () => Promise<void>;
+      copyText: (text: string) => Promise<{ success: boolean }>;
 
       //INITIAL SOLUTION EVENTS
       deleteScreenshot: (

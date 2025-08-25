@@ -79,7 +79,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateContentDimensions: (dimensions) => ipcRenderer.invoke("update-content-dimensions", dimensions),
   takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
   getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
-  deleteScreenshot: (path) => ipcRenderer.invoke("delete-screenshot", path),
+  deleteScreenshot: (path: string) =>
+    ipcRenderer.invoke("delete-screenshot", path),
 
   startSystemAudioRecording: () => ipcRenderer.send('start-system-audio-recording'),
   stopSystemAudioRecording: () => ipcRenderer.send('stop-system-audio-recording'),

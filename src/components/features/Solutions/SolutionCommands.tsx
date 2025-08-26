@@ -1,16 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IoLogOutOutline } from "react-icons/io5";
-import { ThemeToggleButton, TooltipHelp } from "../../layout";
+import {
+  ThemeToggleButton,
+  TooltipHelp,
+  VoiceRecorderButton,
+} from "../../layout";
 import { useTheme } from "../../../contexts";
 
 interface SolutionCommandsProps {
   extraScreenshots: Array<{ path: string; preview: string }>;
   onTooltipVisibilityChange?: (visible: boolean, height: number) => void;
+  onAudioResult: (text: string) => void;
 }
 
 const SolutionCommands: React.FC<SolutionCommandsProps> = ({
   extraScreenshots,
-  onTooltipVisibilityChange
+  onTooltipVisibilityChange,
+  onAudioResult,
 }) => {
   const { theme } = useTheme();
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
@@ -26,14 +32,25 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
     }
   }, [isTooltipVisible, onTooltipVisibilityChange]);
 
-  // helper for button style
   const btnClass =
     theme === "osrs"
       ? "osrs-toolbar-btn"
       : "bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70";
 
+  // LOGGING FUNCTION
+  const handleAndLogResult = (text: string) => {
+    console.log(
+      "LOG 1: SolutionCommands received text. Calling parent function."
+    );
+    onAudioResult(text);
+  };
+
   return (
-    <div className={`pt-2 w-fit relative z-20 ${theme === "osrs" ? "osrs-container" : ""}`}>
+    <div
+      className={`pt-2 w-fit relative z-20 ${
+        theme === "osrs" ? "osrs-container" : ""
+      }`}
+    >
       <div
         className={
           theme === "osrs"
@@ -43,7 +60,15 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
       >
         {/* Show/Hide */}
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <span className={theme === "osrs" ?  "leading-none truncate" : "text-[11px] leading-none truncate"}>Show/Hide</span>
+          <span
+            className={
+              theme === "osrs"
+                ? "leading-none truncate"
+                : "text-[11px] leading-none truncate"
+            }
+          >
+            Show/Hide
+          </span>
           <div className="flex gap-1">
             <button className={btnClass}>CTRL</button>
             <button className={btnClass}>B</button>
@@ -52,7 +77,13 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
 
         {/* Screenshot */}
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <span className={theme === "osrs" ?  "leading-none truncate" : "text-[11px] leading-none truncate"}>
+          <span
+            className={
+              theme === "osrs"
+                ? "leading-none truncate"
+                : "text-[11px] leading-none truncate"
+            }
+          >
             {extraScreenshots.length === 0
               ? "Follow Up Screenshot"
               : "Screenshot"}
@@ -91,6 +122,9 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
 
         {/* Theme Toggle */}
         <ThemeToggleButton />
+
+        {/* Voice Recorder */}
+        <VoiceRecorderButton />
 
         {/* Sign Out */}
         <button

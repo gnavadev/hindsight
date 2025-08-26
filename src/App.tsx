@@ -4,12 +4,14 @@ import { ToastProvider } from "./components/ui/Toast";
 import { ToastViewport } from "@radix-ui/react-toast";
 import Queue from "./pages/Queue";
 import Solutions from "./pages/Solutions";
-import { NewProblemStatementData, NewSolutionData } from "../common/types/solutions"; // CHANGE: Import the new types
+import {
+  NewProblemStatementData,
+  NewSolutionData,
+} from "../common/types/solutions";
 
 declare global {
   interface Window {
     electronAPI: {
-      //RANDOM GETTER/SETTERS
       updateContentDimensions: (dimensions: {
         width: number;
         height: number;
@@ -32,19 +34,29 @@ declare global {
       ) => Promise<{ success: boolean; error?: string }>;
       onSolutionStart: (callback: () => void) => () => void;
       onSolutionError: (callback: (error: string) => void) => () => void;
-      // CHANGE: Update the type definition for the callback data
-      onSolutionSuccess: (callback: (data: NewSolutionData) => void) => () => void;
-      onProblemExtracted: (callback: (data: NewProblemStatementData) => void) => () => void;
+      onSolutionSuccess: (
+        callback: (data: NewSolutionData) => void
+      ) => () => void;
+      onProblemExtracted: (
+        callback: (data: NewProblemStatementData) => void
+      ) => () => void;
 
       // DEBUG EVENTS
-      // CHANGE: Update the type definition for the callback data
       onDebugSuccess: (callback: (data: NewSolutionData) => void) => () => void;
       onDebugStart: (callback: () => void) => () => void;
       onDebugError: (callback: (error: string) => void) => () => void;
 
       // Audio Processing
-      analyzeAudioFromBase64: (data: string, mimeType: string) => Promise<{ text: string; timestamp: number }>;
-      analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>;
+      // REMOVED: The old function that we are no longer using in the pipeline.
+      // analyzeAudioFromBase64: (data: string, mimeType: string) => Promise<{ text: string; timestamp: number }>;
+      analyzeAudioFile: (
+        path: string
+      ) => Promise<{ text: string; timestamp: number }>;
+      // ADDED: The new function that triggers the full backend process.
+      processAudio: (
+        data: string,
+        mimeType: string
+      ) => Promise<{ success: boolean; error?: string }>;
 
       // Window Management
       moveWindowLeft: () => Promise<void>;
@@ -67,7 +79,6 @@ const App: React.FC = () => {
   const [view, setView] = useState<"queue" | "solutions" | "debug">("queue");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // This effect for resetting the view is correct and doesn't need changes.
   useEffect(() => {
     const cleanup = window.electronAPI.onResetView(() => {
       console.log("Received 'reset-view' message from main process.");
@@ -83,7 +94,6 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // This effect for managing window dimensions is also fine.
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -105,7 +115,6 @@ const App: React.FC = () => {
       characterData: true,
     });
 
-    // Initial update
     updateHeight();
 
     return () => {
@@ -114,7 +123,7 @@ const App: React.FC = () => {
     };
   }, [view]);
 
-  // CHANGE: This useEffect block contains the primary logic updates for event handling.
+  // This useEffect block contains the primary logic updates for event handling.
   useEffect(() => {
     const cleanupFunctions = [
       window.electronAPI.onSolutionStart(() => {
@@ -122,35 +131,29 @@ const App: React.FC = () => {
         console.log("Solution process started, switching to solutions view.");
       }),
 
-      // The main change is here in onSolutionSuccess
       window.electronAPI.onSolutionSuccess((data) => {
         console.log("onSolutionSuccess called with new data structure:", data);
-
-        // Check for the new nested structure
         if (!data?.solution) {
-          console.warn("Received data, but it's missing the 'solution' object.", data);
+          console.warn(
+            "Received data, but it's missing the 'solution' object.",
+            data
+          );
           return;
         }
-        
-        // Set the entire data object into the query cache.
-        // The Solutions.tsx component will handle accessing the nested properties.
         console.log("Setting 'solution' query data with the new object:", data);
         queryClient.setQueryData(["solution"], data);
       }),
-      
+
       window.electronAPI.onSolutionError((error) => {
         console.error("Solution error:", error);
-        // It's good practice to show a toast or error message to the user here.
         queryClient.setQueryData(["solution"], null);
       }),
 
       window.electronAPI.onProblemExtracted((data) => {
-        // This logic is still correct. It receives the problem analysis and caches it.
         console.log("Problem extracted successfully:", data);
         queryClient.setQueryData(["problem_statement"], data);
       }),
 
-      // Other listeners are mostly unchanged but are good to keep.
       window.electronAPI.onUnauthorized(() => {
         console.log("Unauthorized access. Resetting view.");
         queryClient.removeQueries();
@@ -165,13 +168,17 @@ const App: React.FC = () => {
     ];
 
     return () => cleanupFunctions.forEach((cleanup) => cleanup());
-  }, [queryClient, view]); // Added 'view' to dependency array as onProblemExtracted depends on it.
+  }, [queryClient, view]);
 
   return (
     <div ref={containerRef} className="min-h-0">
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          {view === "queue" ? <Queue setView={setView} /> : <Solutions setView={setView} />}
+          {view === "queue" ? (
+            <Queue setView={setView} />
+          ) : (
+            <Solutions setView={setView} />
+          )}
           <ToastViewport />
         </ToastProvider>
       </QueryClientProvider>

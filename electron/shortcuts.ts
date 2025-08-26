@@ -49,7 +49,6 @@ export class ShortcutsHelper {
     globalShortcut.register("CommandOrControl+I", () => {
         const currentState = this.appState.getAreMouseEventsIgnored();
         this.appState.setAreMouseEventsIgnored(!currentState);
-        console.log(`Mouse events ignored: ${!currentState}`);
     });
 
     globalShortcut.register("CommandOrControl+Left", () => {

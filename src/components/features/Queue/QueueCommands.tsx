@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IoLogOutOutline } from "react-icons/io5";
-import { ThemeToggleButton, TooltipHelp } from "../../layout";
+import {
+  ThemeToggleButton,
+  TooltipHelp,
+  VoiceRecorderButton,
+} from "../../layout";
 import { useTheme } from "../../../contexts";
 
 interface QueueCommandsProps {
@@ -10,10 +14,9 @@ interface QueueCommandsProps {
 
 const QueueCommands: React.FC<QueueCommandsProps> = ({
   onTooltipVisibilityChange,
-  screenshots
+  screenshots,
 }) => {
   const { theme } = useTheme();
-  const [audioResult, setAudioResult] = useState<string | null>(null);
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -25,9 +28,10 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
     onTooltipVisibilityChange(isTooltipVisible, tooltipHeight);
   }, [isTooltipVisible, onTooltipVisibilityChange]);
 
-  const btnClass = theme === "osrs"
-    ? "osrs-toolbar-btn"
-    : "bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70 font-bold";
+  const btnClass =
+    theme === "osrs"
+      ? "osrs-toolbar-btn"
+      : "bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70 font-bold";
 
   return (
     <div className={`pt-2 w-fit ${theme === "osrs" ? "osrs-container" : ""}`}>
@@ -40,7 +44,15 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
       >
         {/* Show/Hide */}
         <div className="flex items-center gap-2">
-          <span className={theme === "osrs" ? "leading-none truncate" : "text-xs leading-none truncate"}>Show/Hide</span>
+          <span
+            className={
+              theme === "osrs"
+                ? "leading-none truncate"
+                : "text-xs leading-none truncate"
+            }
+          >
+            Show/Hide
+          </span>
           <div className="flex gap-1">
             <button className={btnClass}>CTRL</button>
             <button className={btnClass}>B</button>
@@ -49,7 +61,13 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
 
         {/* Screenshot */}
         <div className="flex items-center gap-2">
-          <span className={theme === "osrs" ? "leading-none truncate" : "text-xs leading-none truncate"}>
+          <span
+            className={
+              theme === "osrs"
+                ? "leading-none truncate"
+                : "text-xs leading-none truncate"
+            }
+          >
             {screenshots.length === 0 ? "Take first screenshot" : "Screenshot"}
           </span>
           <div className="flex gap-1">
@@ -61,7 +79,11 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
         {/* Solve Command */}
         {screenshots.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className={theme === "osrs" ?  "" : "text-[11px] leading-none"}>Solve</span>
+            <span
+              className={theme === "osrs" ? "" : "text-[11px] leading-none"}
+            >
+              Solve
+            </span>
             <div className="flex gap-1">
               <button className={btnClass}>CTRL</button>
               <button className={btnClass}>↵</button>
@@ -70,10 +92,16 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
         )}
 
         {/* Tooltip */}
-        <TooltipHelp onTooltipVisibilityChange={onTooltipVisibilityChange || (() => {})} theme={theme}/>
+        <TooltipHelp
+          onTooltipVisibilityChange={onTooltipVisibilityChange || (() => {})}
+          theme={theme}
+        />
 
         {/* Theme Toggle */}
         <ThemeToggleButton />
+
+        {/* Voice Recorder */}
+        <VoiceRecorderButton />
 
         {/* Sign Out */}
         <button
@@ -87,19 +115,6 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
           <IoLogOutOutline className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Audio Result */}
-      {/* {audioResult && (
-        <div
-          className={
-            theme === "osrs"
-              ? "mt-2 p-2 osrs-tooltip rounded text-xs max-w-md"
-              : "mt-2 p-2 bg-white/10 rounded text-white text-xs max-w-md"
-          }
-        >
-          <span className="font-semibold">Audio Result:</span> {audioResult}
-        </div>
-      )} */}
     </div>
   );
 };

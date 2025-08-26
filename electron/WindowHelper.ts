@@ -188,14 +188,9 @@ export class WindowHelper {
     });
   }
 
-  public enableMouseEventsTemporary(duration: number = 20000): void {
+  public enableMouseEvents(): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
-
     this.mainWindow.setIgnoreMouseEvents(false);
-
-    setTimeout(() => {
-      this.disableMouseEvents();
-    }, duration);
   }
 
   public disableMouseEvents(): void {

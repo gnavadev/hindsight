@@ -1,8 +1,5 @@
 import { AppState } from "./main";
 import { LLMHelper } from "./LLMHelper";
-// We no longer need dotenv for this temporary fix
-// import dotenv from "dotenv";
-// dotenv.config();
 
 export class ProcessingHelper {
   private appState: AppState;
@@ -26,6 +23,49 @@ export class ProcessingHelper {
     }
 
     this.llmHelper = new LLMHelper(apiKey);
+  }
+
+  public async processAudioAsProblem(data: string, mimeType: string): Promise<void> {
+    const mainWindow = this.appState.getMainWindow();
+    if (!mainWindow) return;
+
+    if (!this.llmHelper) {
+      console.log("Processing blocked because API key is not set.");
+      mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.UNAUTHORIZED);
+      return;
+    }
+
+    mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.INITIAL_START);
+    this.appState.clearQueues(); // Clear previous items
+    this.appState.setView("solutions");
+
+    try {
+      console.log("ProcessingHelper: Calling analyzeAudioFromBase64...");
+      const problemInfo = await this.llmHelper.analyzeAudioFromBase64(data, mimeType);
+      console.log("ProcessingHelper: Problem extracted from audio:", problemInfo);
+
+      mainWindow.webContents.send(
+        this.appState.PROCESSING_EVENTS.PROBLEM_EXTRACTED,
+        problemInfo
+      );
+      this.appState.setProblemInfo(problemInfo);
+
+      console.log("ProcessingHelper: Calling generateSolution for audio problem...");
+      const solutionResult = await this.llmHelper.generateSolution(problemInfo);
+      console.log("ProcessingHelper: Solution generated for audio problem:", solutionResult);
+      
+      this.appState.setSolutionInfo(solutionResult);
+      mainWindow.webContents.send(
+        this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
+        solutionResult
+      );
+    } catch (error: any) {
+      console.error("Error during audio processing:", error);
+      mainWindow.webContents.send(
+        this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+        "The AI failed to process the audio. Please try again."
+      );
+    }
   }
 
   public setApiKey(apiKey: string): void {
@@ -168,11 +208,6 @@ export class ProcessingHelper {
       this.currentExtraProcessingAbortController = null;
     }
     this.appState.setHasDebugged(false);
-  }
-
-  public async processAudioBase64(data: string, mimeType: string) {
-    if (!this.llmHelper) return null;
-    return this.llmHelper.analyzeAudioFromBase64(data, mimeType);
   }
 
   public async processAudioFile(filePath: string) {

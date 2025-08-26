@@ -17,6 +17,16 @@ export function initializeIpcHandlers(appState: AppState): void {
     await appState.processingHelper.processScreenshots();
   });
 
+  ipcMain.handle("process-audio", async (event, data: string, mimeType: string) => {
+    try {
+      await appState.processingHelper.processAudioAsProblem(data, mimeType);
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error in process-audio handler:", error);
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle("delete-screenshot", async (event, path: string) => {
     return appState.deleteScreenshot(path);
   });
@@ -78,25 +88,6 @@ export function initializeIpcHandlers(appState: AppState): void {
       return { success: false, error: error.message };
     }
   });
-
-  // IPC handler for analyzing audio from base64 data
-  ipcMain.handle(
-    "analyze-audio-base64",
-    async (event, data: string, mimeType: string) => {
-      try {
-        const result = await appState.processingHelper.processAudioBase64(
-          data,
-          mimeType
-        );
-        return result;
-      } catch (error: any) {
-        console.error("Error in analyze-audio-base64 handler:", error);
-        throw error;
-      }
-    }
-  );
-
-  // IPC handler for analyzing audio from file path
   ipcMain.handle("analyze-audio-file", async (event, path: string) => {
     try {
       const result = await appState.processingHelper.processAudioFile(path);

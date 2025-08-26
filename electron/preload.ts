@@ -22,15 +22,16 @@ interface ElectronAPI {
   onProcessingNoScreenshots: (callback: () => void) => () => void
   onProblemExtracted: (callback: (data: any) => void) => () => void
   onSolutionSuccess: (callback: (data: any) => void) => () => void
-
   onUnauthorized: (callback: () => void) => () => void
   onDebugError: (callback: (error: string) => void) => () => void
   takeScreenshot: () => Promise<void>
   moveWindowLeft: () => Promise<void>
   moveWindowRight: () => Promise<void>
-  analyzeAudioFromBase64: (data: string, mimeType: string) => Promise<{ text: string; timestamp: number }>
+  // REMOVED: analyzeAudioFromBase64, as it's replaced by the new pipeline
   analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>
   analyzeImageFile: (path: string) => Promise<void>
+  // ADDED: The new function for the full audio pipeline
+  processAudio: (data: string, mimeType: string) => Promise<{ success: boolean; error?: string }>
   quitApp: () => Promise<void>
 }
 
@@ -100,7 +101,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.removeListener(PROCESSING_EVENTS.DEBUG_START, subscription)
     }
   },
-
   onDebugSuccess: (callback: (data: any) => void) => {
     ipcRenderer.on("debug-success", (_event, data) => callback(data))
     return () => {
@@ -133,7 +133,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.removeListener(PROCESSING_EVENTS.NO_SCREENSHOTS, subscription)
     }
   },
-
   onProblemExtracted: (callback: (data: any) => void) => {
     const subscription = (_: any, data: any) => callback(data)
     ipcRenderer.on(PROCESSING_EVENTS.PROBLEM_EXTRACTED, subscription)
@@ -163,8 +162,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
   moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
-  analyzeAudioFromBase64: (data: string, mimeType: string) => ipcRenderer.invoke("analyze-audio-base64", data, mimeType),
+  // REMOVED: The old ipcRenderer.invoke for "analyze-audio-base64"
   analyzeAudioFile: (path: string) => ipcRenderer.invoke("analyze-audio-file", path),
   analyzeImageFile: (path: string) => ipcRenderer.invoke("analyze-image-file", path),
+  // ADDED: The new ipcRenderer.invoke for "process-audio"
+  processAudio: (data: string, mimeType: string) => ipcRenderer.invoke("process-audio", data, mimeType),
   quitApp: () => ipcRenderer.invoke("quit-app")
 } as ElectronAPI)

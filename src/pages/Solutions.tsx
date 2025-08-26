@@ -134,16 +134,18 @@ const SolutionSection = ({
   title,
   content,
   isLoading,
-  language = "python",
+  language,
   theme,
 }: {
   title: string;
   content: string;
   isLoading: boolean;
-  language?: string;
+  language?: string | null;
   theme: Theme;
 }) => {
   const [copied, setCopied] = useState(false);
+
+  const displayLanguage = language || "python";
 
   const copyToClipboard = async () => {
     if (typeof content === "string") {
@@ -184,7 +186,7 @@ const SolutionSection = ({
         <div className="w-full relative">
           <SyntaxHighlighter
             showLineNumbers
-            language={language.toLowerCase()}
+            language={displayLanguage.toLowerCase()} // Use the safe displayLanguage
             style={dracula}
             customStyle={{
               maxWidth: "100%",
@@ -330,6 +332,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [tooltipHeight, setTooltipHeight] = useState(0);
   const [isResetting, setIsResetting] = useState(false);
+  const [audioResult, setAudioResult] = useState<string | null>(null);
 
   const showToast = (
     title: string,
@@ -339,6 +342,15 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
     setToastMessage({ title, description, variant });
     setToastOpen(true);
   };
+
+  const handleAudioResult = (text: string) => {
+    console.log("LOG 2: Solutions.tsx received text. Updating state.");
+    setAudioResult(text);
+  };
+  console.log(
+    "LOG 3: Solutions.tsx rendering. Current audioResult is:",
+    audioResult
+  );
 
   const handleDeleteExtraScreenshot = async (index: number) => {
     const screenshotToDelete = extraScreenshots[index];
@@ -457,6 +469,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
           <SolutionCommands
             extraScreenshots={extraScreenshots}
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
+            onAudioResult={handleAudioResult}
           />
 
           <div

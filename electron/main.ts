@@ -102,7 +102,7 @@ export class AppState {
     if (value) {
       this.windowHelper.disableMouseEvents();
     } else {
-      this.windowHelper.enableMouseEventsTemporary();
+      this.windowHelper.enableMouseEvents();
     }
   }
 

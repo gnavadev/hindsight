@@ -32,6 +32,7 @@ interface ElectronAPI {
   analyzeImageFile: (path: string) => Promise<void>
   // ADDED: The new function for the full audio pipeline
   processAudio: (data: string, mimeType: string) => Promise<{ success: boolean; error?: string }>
+  onToggleRecording: (callback: () => void) => () => void
   quitApp: () => Promise<void>
 }
 
@@ -80,6 +81,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.removeListener("solutions-ready", subscription)
     }
   },
+
+  onToggleRecording: (callback: () => void) => {
+    const subscription = () => callback();
+    ipcRenderer.on("toggle-recording", subscription);
+    return () => {
+      ipcRenderer.removeListener("toggle-recording", subscription);
+    };
+  },
+
   onResetView: (callback: () => void) => {
     const subscription = () => callback()
     ipcRenderer.on("reset-view", subscription)

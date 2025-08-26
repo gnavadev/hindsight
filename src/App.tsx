@@ -57,7 +57,7 @@ declare global {
         data: string,
         mimeType: string
       ) => Promise<{ success: boolean; error?: string }>;
-
+      onToggleRecording: (callback: () => void) => () => void;
       // Window Management
       moveWindowLeft: () => Promise<void>;
       moveWindowRight: () => Promise<void>;

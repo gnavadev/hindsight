@@ -26,6 +26,13 @@ export class ShortcutsHelper {
       }
     })
 
+    globalShortcut.register("CommandOrControl+Shift+A", () => {
+      const mainWindow = this.appState.getMainWindow();
+      if (mainWindow) {
+        mainWindow.webContents.send("toggle-recording");
+      }
+    });
+
     globalShortcut.register("CommandOrControl+Enter", async () => {
       await this.appState.processingHelper.processScreenshots()
     })

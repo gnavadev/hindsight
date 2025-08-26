@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect} from "react";
 import { IoMicCircle } from "react-icons/io5";
 import { useTheme } from "../../contexts/ThemeContext";
 
@@ -59,6 +59,15 @@ const VoiceRecorderButton: React.FC = () => {
       streamRef.current = null;
     }
   };
+
+  useEffect(() => {
+    const cleanup = window.electronAPI.onToggleRecording(() => {
+      handleRecordClick();
+    });
+    return () => {
+      cleanup();
+    };
+  }, [isRecording, mediaRecorder]);
 
   const defaultClasses = `bg-white/10 hover:bg-white/20 ${
     isRecording ? "bg-red-500/70 text-white animate-pulse" : "text-white/70"

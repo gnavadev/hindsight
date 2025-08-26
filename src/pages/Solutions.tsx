@@ -469,7 +469,6 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
           <SolutionCommands
             extraScreenshots={extraScreenshots}
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
-            onAudioResult={handleAudioResult}
           />
 
           <div

@@ -10,13 +10,11 @@ import { useTheme } from "../../../contexts";
 interface SolutionCommandsProps {
   extraScreenshots: Array<{ path: string; preview: string }>;
   onTooltipVisibilityChange?: (visible: boolean, height: number) => void;
-  onAudioResult: (text: string) => void;
 }
 
 const SolutionCommands: React.FC<SolutionCommandsProps> = ({
   extraScreenshots,
   onTooltipVisibilityChange,
-  onAudioResult,
 }) => {
   const { theme } = useTheme();
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
@@ -36,15 +34,7 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
     theme === "osrs"
       ? "osrs-toolbar-btn"
       : "bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70";
-
-  // LOGGING FUNCTION
-  const handleAndLogResult = (text: string) => {
-    console.log(
-      "LOG 1: SolutionCommands received text. Calling parent function."
-    );
-    onAudioResult(text);
-  };
-
+      
   return (
     <div
       className={`pt-2 w-fit relative z-20 ${

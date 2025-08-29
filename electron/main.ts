@@ -128,7 +128,7 @@ export class AppState {
   }
 
   public getExtraScreenshotQueue(): string[] {
-    return this.screenshotHelper.getExtraScreenshotQueue();
+    return this.screenshotHelper.getScreenshotQueue();
   }
 
   public createWindow(): void {

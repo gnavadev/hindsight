@@ -1,5 +1,5 @@
 import { BrowserWindow, screen } from "electron";
-import { AppState } from "./main";
+import { AppState } from "./main.js";
 import path from "node:path";
 import isDev from "electron-is-dev";
 
@@ -85,7 +85,7 @@ export class WindowHelper {
       acceptFirstMouse: false,
       disableAutoHideCursor: true,
       enableLargerThanScreen: true,
-      opacity: 0.7,
+      opacity: 0.8,
     };
 
     this.mainWindow = new BrowserWindow(windowSettings);
@@ -105,7 +105,7 @@ export class WindowHelper {
     });
 
     if (isDev) {
-      this.mainWindow.loadURL("http://localhost:5180");
+      this.mainWindow.loadURL("http://localhost:5173");
     } else {
       this.mainWindow.loadFile(
         path.join(__dirname, "..", "dist", "index.html")

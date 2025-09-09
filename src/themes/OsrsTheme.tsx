@@ -1,11 +1,11 @@
 export const OSRSTheme = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=RuneScape+UF&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
 
     /* Container background */
     .osrs-container {
       color:  #ffff11;
-      font-family: 'RuneScape UF', sans-serif;
+      font-family: 'Inter', sans-serif;
       background-color: #c8b997; /* parchment base */
       border: 2px solid #2e2b21; /* outer border */
       box-shadow:
@@ -13,8 +13,8 @@ export const OSRSTheme = () => (
         inset 0 0 0 4px #000,
         inset 0 0 0 7px #5a4a3a;
       text-shadow: 2px 1px 1px #000000;  
-      font-size: 16px;
-      padding: 16px;
+      font-size: 14px;
+      padding: 12px;
     }
 
     /* Headers */

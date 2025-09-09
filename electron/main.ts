@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from "electron";
 import { initializeIpcHandlers } from "./ipcHandlers";
-import { WindowHelper } from "./WindowHelper.mjs";
+import { WindowHelper } from "./WindowHelper";
 import { ScreenshotHelper } from "./ScreenshotHelper";
 import { ShortcutsHelper } from "./shortcuts";
 import { ProcessingHelper } from "./ProcessingHelper";

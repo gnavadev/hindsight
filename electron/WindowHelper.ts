@@ -1,7 +1,12 @@
 import { BrowserWindow, screen } from "electron";
 import { AppState } from "./main.js";
 import path from "node:path";
-import isDev from "electron-is-dev";
+
+let isDev = false;
+(async () => {
+  const mod = await import("electron-is-dev");
+  isDev = mod.default;
+})();
 
 export class WindowHelper {
   private mainWindow: BrowserWindow | null = null;

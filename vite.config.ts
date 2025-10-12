@@ -1,25 +1,24 @@
+// vite.config.ts
+
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import electron from 'vite-plugin-electron';
+import path from 'node:path';
+import electron from 'vite-plugin-electron/simple';
+import react from '@vitejs/plugin-react'; // Or your renderer framework's plugin
 
 export default defineConfig({
   plugins: [
-    react(),
-    electron([
-      {
-        // Main process entry file
+    react(), // Make sure your renderer plugin is here
+    electron({
+      main: {
+        // The entry file for the main process
         entry: 'electron/main.ts',
       },
-      {
-        // Preload script entry file
-        entry: 'electron/preload.ts',
-        onstart(options) {
-          // This will reload the renderer process whenever you change the preload script.
-          options.reload();
-        },
+      preload: {
+        // The entry file for the preload script
+        input: path.join(__dirname, 'electron/preload.ts'),
       },
-    ]),
+      // Optional: Use this if you want Vite to handle the renderer process
+      renderer: {},
+    }),
   ],
-  // This ensures your assets are copied to the build folder
-  publicDir: 'assets',
 });

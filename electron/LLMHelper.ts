@@ -52,7 +52,7 @@ Your output must be a single JSON object. Do not include any other text or forma
       "problem_type": "coding",
       "problem_statement": "A summary of the coding task or error.",
       "details": {
-        "language": "e.g., Python, JavaScript",
+        "language": "e.g., cpp, python, javacript",
         "code_snippet": "The main block of code from the text.",
         "error_message": "Any error message mentioned in the text."
       }
@@ -176,7 +176,7 @@ Your output will be a single JSON object.
       "problem_type": "coding",
       "problem_statement": "A summary of the coding task or error.",
       "details": {
-        "language": "e.g., Python, JavaScript",
+        "language": "e.g., cpp, python, javascript",
         "code_snippet": "The main block of code.",
         "error_message": "Any error message shown, if applicable."
       }
@@ -237,32 +237,46 @@ Your output will be a single JSON object.
     }
   }
 
-  public async generateSolution(problemInfo: any) {
-    const prompt = `${
-      this.systemPrompt
-    }\n\nBased on the following classified problem, generate a helpful solution in the specified JSON format.
+  // LLMHelper.ts
 
-The problem type is: **${problemInfo.problem_type}**
+  public async generateSolution(problemInfo: any) {
+    const prompt = `You are an expert software engineer who excels in technical interviews and competitive programming (like LeetCode).
+Your primary goal is to generate the most optimal, production-grade code possible based on the user's problem.
+
+**Your priorities are, in this exact order:**
+1.  **Correctness & Reliability**: The code must produce the correct result for all edge cases.
+2.  **Time Complexity**: The solution must have the lowest possible Big O time complexity.
+3.  **Space Complexity**: The solution must use the lowest possible Big O space complexity.
 
 **Problem Details:**
 ${JSON.stringify(problemInfo, null, 2)}
 
-**IMPORTANT RULE FOR YOUR RESPONSE:** Your entire response must be a single, raw JSON object. Use only standard ASCII characters. For example, use "!=" instead of "≠" and use single quotes "'" instead of special quote characters.
+---
+**CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:**
 
-**Instructions for Your Response Content:**
--   If the problem_type is **'coding'**, the "answer" field should contain only the complete, raw code. Your priorities for the code are: 1-correctness, 2-efficiency, 3-clarity(Cyclomatic Complexity). Also provide 'time_complexity' and 'space_complexity' in Big O notation.
--   If the problem_type is **'multiple_choice'**, the "answer" field should be a Markdown-formatted string. For each question, use a heading (e.g., '### Question 1'), and then on new lines, use the format: "**Correct Answer:** [The Answer]" and "**Justification:** [The Explanation]".
--   If the problem_type is **'q_and_a'** or **'math'**, the "answer" field should be a clear, well-formatted textual explanation.
+1.  **Optimal Solution**: Generate the most efficient solution. For Object-Oriented problems, design the class as a single, cohesive unit, avoiding redundant methods that increase overall complexity.
+2.  **Trade-offs**: If a meaningful trade-off exists between time and space complexity, your primary solution in the "solution" field should be the one with the best time complexity. Then, you MUST provide the alternative (e.g., the space-optimized version) in the "alternative_solutions" array. If no meaningful trade-off exists, this array should be empty.
+3.  **Code Explanation (High-Level)**: The "code_explanation" field is for a user who has a disability that makes it difficult to answer "why" questions in real-time. You MUST explain the high-level reasoning behind the code. Explain key data structure choices (e.g., "Why a HashMap instead of an array?") and algorithm choices as if you were explaining them to an interviewer.
+4.  **Commented Code (Detailed)**: The code in the "answer" field MUST be well-commented. Add concise, inline comments to explain the purpose of crucial lines, complex logic, or non-obvious variable initializations. These comments should provide a detailed, line-by-line understanding.
 
-**JSON Response Format:**
+**Your entire response MUST be a single, raw JSON object.**
+
+**JSON Response Format EXAMPLE:**
 {
   "solution": {
-    "answer": "The solution content, following the rules above.",
-    "reasoning": "A high-level summary of the overall approach taken, explaining the reasoning behind every decision.",
-    "time_complexity": "For 'coding' problems, the Big O time complexity (e.g., 'O(n)'). For others, null.",
-    "space_complexity": "For 'coding' problems, the Big O space complexity (e.g., 'O(1)'). For others, null.",
-    "suggested_next_steps": ["A relevant follow-up action.", "Another possible action."]
-  }
+    "focus": "Time Complexity",
+    "answer": "def twoSum(nums, target):\\n    # Use a hash map to store numbers we've seen and their indices.\\n    num_map = {}\\n    for i, num in enumerate(nums):\\n        # Calculate the complement needed to reach the target.\\n        complement = target - num\\n        # If the complement is already in our map, we've found a solution.\\n        if complement in num_map:\\n            return [num_map[complement], i]\\n        # Otherwise, store the current number and its index for future lookups.\\n        num_map[num] = i",
+    "reasoning": "A high-level summary of the algorithm and data structures used.",
+    "time_complexity": "O(n)",
+    "space_complexity": "O(n)",
+    "code_explanation": [
+      {
+        "part": "The use of a HashMap (Dictionary in Python)",
+        "explanation": "We use a HashMap because it provides average O(1) time complexity for insertions and lookups. This allows us to check for the existence of the complement in constant time, which is the core of this efficient single-pass solution."
+      }
+    ]
+  },
+  "alternative_solutions": []
 }
 `;
     let rawText = "";
@@ -332,6 +346,7 @@ ${errorAnalysis}
 Write NEW code that implements the "REQUIRED FIX".
 - The "answer" field must contain ONLY the raw corrected code.
 - Use the provided "REQUIRED FIX" analysis as the "reasoning" for your solution.
+- **Ensure the corrected code maintains the highest possible efficiency.**
 
 **JSON Response Format:**
 {

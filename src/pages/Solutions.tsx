@@ -186,16 +186,15 @@ const SolutionSection = ({
         <div className="w-full relative">
           <SyntaxHighlighter
             showLineNumbers
-            language={displayLanguage.toLowerCase()} // Use the safe displayLanguage
+            language={displayLanguage}
             style={dracula}
             customStyle={{
+              ...dracula,
               maxWidth: "100%",
               margin: 0,
               padding: "1rem",
               whiteSpace: "pre-wrap",
               wordBreak: "break-all",
-              backgroundColor:
-                theme === "osrs" ? "rgba(0,0,0,0.8)" : "rgba(22, 27, 34, 0.5)",
               fontSize: "0.8rem",
             }}
             wrapLongLines={true}
@@ -316,7 +315,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
   });
 
   const problemType = problemStatementData?.problem_type;
-  const language = problemStatementData?.details?.language;
+  const language = problemStatementData?.details?.language?.toLowerCase().split(/[\s(]/)[0] || null;
   const answerData = solution?.solution?.answer;
   const reasoningData = solution?.solution?.reasoning;
   const timeComplexityData = solution?.solution?.time_complexity ?? null;

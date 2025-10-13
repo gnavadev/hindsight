@@ -168,7 +168,7 @@ For 'q_and_a', 'math', or 'general_reasoning':
 Analyze the provided image(s) and extract problem information:
 
 1. **Understand the Content**: Carefully examine all images to understand the complete problem
-2. **Classify the Problem Type**: Determine which category fits:
+2. **Classify the Problem Type**: Determine which category fits. **If the image contains a code snippet, error message, or is primarily about a programming task, it MUST be classified as 'coding', even if there is a natural language question present.** The 'q_and_a' category is for questions that do NOT primarily involve code.
    - 'coding': Code snippets, error messages, programming tasks
    - 'multiple_choice': Questions with multiple choice options
    - 'q_and_a': Questions requiring detailed answers

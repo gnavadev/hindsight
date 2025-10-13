@@ -38,12 +38,15 @@ export class WindowHelper {
 
     const newWidth = Math.min(width + 32, maxAllowedWidth);
     const newHeight = Math.ceil(height);
+
+    // Allow negative Y positions so content can be scrolled by moving window up
+    // Only constrain X position to keep window partially visible horizontally
     const maxX = workArea.width - newWidth;
     const newX = Math.min(Math.max(currentX, 0), maxX);
 
     this.mainWindow.setBounds({
       x: newX,
-      y: currentY,
+      y: currentY, // Don't constrain Y, allow negative values
       width: newWidth,
       height: newHeight,
     });
@@ -73,7 +76,7 @@ export class WindowHelper {
         allowRunningInsecureContent: false,
         backgroundThrottling: false,
       },
-      show: true, // Start hidden, show later
+      show: true,
       alwaysOnTop: true,
       frame: false,
       transparent: true,
@@ -89,7 +92,7 @@ export class WindowHelper {
       thickFrame: false,
       acceptFirstMouse: false,
       disableAutoHideCursor: true,
-      enableLargerThanScreen: true,
+      enableLargerThanScreen: true, // Important: allows window larger than screen
       opacity: 0.8,
     };
 
@@ -97,14 +100,28 @@ export class WindowHelper {
     // this.mainWindow.webContents.openDevTools({ mode: "detach" });
 
     this.mainWindow.setVisibleOnAllWorkspaces(true, {
-      visibleOnFullScreen: true
+      visibleOnFullScreen: true,
     });
     this.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
     this.mainWindow.setContentProtection(true);
+
+    // Remove the CSS that disables scrollbars - we need them for navigation
     this.mainWindow.webContents.on("did-finish-load", () => {
+      // Only hide scrollbars visually, but keep scroll functionality
       const css = `
-        *::-webkit-scrollbar { display: none !important; }
-        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        *::-webkit-scrollbar { 
+          width: 0px !important;
+          height: 0px !important;
+          display: none !important; 
+        }
+        * { 
+          -ms-overflow-style: none !important; 
+          scrollbar-width: none !important; 
+        }
+        body, html {
+          overflow: auto !important;
+          scroll-behavior: smooth !important;
+        }
       `;
       this.mainWindow.webContents.insertCSS(css);
     });
@@ -293,15 +310,16 @@ export class WindowHelper {
     if (!this.mainWindow) return;
 
     const windowHeight = this.windowSize?.height || 0;
-    const halfHeight = windowHeight / 2;
 
     this.currentX = Number(this.currentX) || 0;
     this.currentY = Number(this.currentY) || 0;
 
-    this.currentY = Math.min(
-      this.screenHeight - halfHeight,
-      this.currentY + this.step
-    );
+    // Allow moving down, but keep at least 100px of the window visible at top
+    const minVisibleHeight = 100;
+    const maxY = this.screenHeight - minVisibleHeight;
+
+    this.currentY = Math.min(maxY, this.currentY + this.step);
+
     this.mainWindow.setPosition(
       Math.round(this.currentX),
       Math.round(this.currentY)
@@ -312,15 +330,60 @@ export class WindowHelper {
     if (!this.mainWindow) return;
 
     const windowHeight = this.windowSize?.height || 0;
-    const halfHeight = windowHeight / 2;
 
     this.currentX = Number(this.currentX) || 0;
     this.currentY = Number(this.currentY) || 0;
 
-    this.currentY = Math.max(-halfHeight, this.currentY - this.step);
+    // Allow moving up, but keep at least 100px of the window visible at bottom
+    const minVisibleHeight = 100;
+    const minY = -(windowHeight - minVisibleHeight);
+
+    this.currentY = Math.max(minY, this.currentY - this.step);
+
     this.mainWindow.setPosition(
       Math.round(this.currentX),
       Math.round(this.currentY)
     );
+  }
+
+  /**
+   * Reset window position to center/top for better visibility
+   */
+  public resetWindowPosition(): void {
+    if (!this.mainWindow) return;
+
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const workArea = primaryDisplay.workAreaSize;
+    const windowWidth = this.windowSize?.width || 400;
+
+    // Center horizontally, start at top
+    this.currentX = Math.floor((workArea.width - windowWidth) / 2);
+    this.currentY = 0;
+
+    this.mainWindow.setPosition(
+      Math.round(this.currentX),
+      Math.round(this.currentY)
+    );
+  }
+
+  /**
+   * Get suggested Y position to show specific content
+   */
+  public scrollToShowContent(contentHeight: number): void {
+    if (!this.mainWindow) return;
+
+    const windowHeight = this.windowSize?.height || 600;
+
+    // If content is taller than window, allow negative Y to show bottom
+    if (contentHeight > windowHeight) {
+      const maxNegativeY = -(contentHeight - windowHeight);
+      // Position window to show middle of content
+      this.currentY = Math.floor(maxNegativeY / 2);
+
+      this.mainWindow.setPosition(
+        Math.round(this.currentX),
+        Math.round(this.currentY)
+      );
+    }
   }
 }

@@ -28,7 +28,7 @@ import Debug from "./Debug";
  */
 const formatCodeContent = (content: string): string => {
   if (typeof content !== "string") return "";
-  
+
   // Remove markdown code blocks
   return content
     .replace(/^```[\w]*\n/gm, "")
@@ -41,7 +41,7 @@ const formatCodeContent = (content: string): string => {
  */
 const normalizeLanguage = (lang: string | null | undefined): string => {
   if (!lang) return "text";
-  
+
   return lang
     .toLowerCase()
     .replace("c++", "cpp")
@@ -204,7 +204,29 @@ export const ComplexitySection = ({
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400/80 mt-2 shrink-0" />
           )}
           <div>
-            <span className="font-medium">Time:</span> {timeComplexity}
+            <span className="font-medium">Time:</span>{" "}
+            {timeComplexity && (
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => <>{children}</>, // Use fragment to keep it inline
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-white">
+                      {children}
+                    </strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="italic text-gray-200">{children}</em>
+                  ),
+                  code: ({ children }) => (
+                    <code className="px-1.5 py-0.5 bg-gray-800/80 rounded text-xs font-mono text-blue-300">
+                      {children}
+                    </code>
+                  ),
+                }}
+              >
+                {timeComplexity}
+              </ReactMarkdown>
+            )}
           </div>
         </div>
         <div
@@ -218,7 +240,29 @@ export const ComplexitySection = ({
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400/80 mt-2 shrink-0" />
           )}
           <div>
-            <span className="font-medium">Space:</span> {spaceComplexity}
+            <span className="font-medium">Space:</span>{" "}
+            {spaceComplexity && (
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => <>{children}</>, // Use fragment to keep it inline
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-white">
+                      {children}
+                    </strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="italic text-gray-200">{children}</em>
+                  ),
+                  code: ({ children }) => (
+                    <code className="px-1.5 py-0.5 bg-gray-800/80 rounded text-xs font-mono text-blue-300">
+                      {children}
+                    </code>
+                  ),
+                }}
+              >
+                {spaceComplexity}
+              </ReactMarkdown>
+            )}
           </div>
         </div>
       </div>
@@ -282,15 +326,57 @@ const CodeExplanationSection = ({
               >
                 {item.part}
               </p>
-              <p
-                className={
-                  theme === "osrs"
-                    ? "osrs-content"
-                    : "text-[13px] leading-relaxed text-gray-200"
-                }
-              >
-                {item.explanation}
-              </p>
+              <div className="prose prose-invert prose-sm max-w-none text-[13px] leading-relaxed text-gray-200">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => (
+                      <p className="mb-3 last:mb-0 leading-relaxed text-gray-200">
+                        {children}
+                      </p>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-white">{children}</strong>
+                    ),
+                    em: ({ children }) => (
+                      <em className="italic text-gray-200">{children}</em>
+                    ),
+                    code: ({ children }) => (
+                      <code className="px-1.5 py-0.5 bg-gray-800/80 rounded text-xs font-mono text-blue-300">
+                        {children}
+                      </code>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="list-disc list-inside space-y-1 mb-3">
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal list-inside space-y-1 mb-3">
+                        {children}
+                      </ol>
+                    ),
+                    li: ({ children }) => (
+                      <li className="leading-relaxed">{children}</li>
+                    ),
+                    h1: ({ children }) => (
+                      <h1 className="text-lg font-bold mb-2 text-white">{children}</h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="text-base font-bold mb-2 text-white">{children}</h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-sm font-semibold mb-2 text-white">{children}</h3>
+                    ),
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-2 border-blue-400/50 pl-3 italic text-gray-300 my-2">
+                        {children}
+                      </blockquote>
+                    ),
+                  }}
+                >
+                  {item.explanation}
+                </ReactMarkdown>
+              </div>
             </div>
           ))}
         </div>
@@ -317,7 +403,7 @@ const SolutionSection = ({
   theme: Theme;
 }) => {
   const [copied, setCopied] = useState(false);
-  
+
   // Memoize formatted content to avoid re-processing on every render
   const formattedContent = useMemo(() => formatCodeContent(content), [content]);
   const displayLanguage = useMemo(() => normalizeLanguage(language), [language]);
@@ -593,11 +679,11 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
       if (contentRef.current) {
         let contentHeight = contentRef.current.scrollHeight;
         const contentWidth = contentRef.current.scrollWidth;
-        
+
         if (isTooltipVisible) {
           contentHeight += tooltipHeight;
         }
-        
+
         window.electronAPI.updateContentDimensions({
           width: contentWidth,
           height: contentHeight,
@@ -606,7 +692,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
     };
 
     const resizeObserver = new ResizeObserver(updateDimensions);
-    
+
     if (contentRef.current) {
       resizeObserver.observe(contentRef.current);
     }
@@ -616,7 +702,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
     // Event listener cleanup functions
     const cleanupFunctions = [
       window.electronAPI.onScreenshotTaken(() => refetchScreenshots()),
-      
+
       window.electronAPI.onResetView(() => {
         setIsResetting(true);
         queryClient.removeQueries(["solution"]);
@@ -624,13 +710,13 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         refetchScreenshots();
         setTimeout(() => setIsResetting(false), 0);
       }),
-      
+
       window.electronAPI.onSolutionStart(async () => {
         queryClient.setQueryData(["solution"], null);
       }),
-      
+
       window.electronAPI.onDebugStart(() => setDebugProcessing(true)),
-      
+
       window.electronAPI.onDebugSuccess((data) => {
         queryClient.setQueryData(["new_solution"], data);
         setDebugProcessing(false);
@@ -641,7 +727,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
           "success"
         );
       }),
-      
+
       window.electronAPI.onDebugError(() => {
         showToast(
           "Processing Failed",
@@ -650,7 +736,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         );
         setDebugProcessing(false);
       }),
-      
+
       window.electronAPI.onProcessingNoScreenshots(() => {
         showToast(
           "No Screenshots",
@@ -686,7 +772,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
             language={language}
             theme={theme}
           />
-          
+
           {codeExplanations && codeExplanations.length > 0 && (
             <CodeExplanationSection
               explanations={codeExplanations}
@@ -706,7 +792,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         </>
       );
     }
-    
+
     // Q&A, Multiple Choice, General Reasoning: Show structured answers
     if (listRenderTypes.includes(problemType || "")) {
       return (
@@ -728,7 +814,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         </div>
       );
     }
-    
+
     // Math and other types: Show in code box for better formatting
     return (
       <SolutionSection
@@ -748,7 +834,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
   return (
     <>
       {!isResetting &&
-      queryClient.getQueryData<NewSolutionData>(["new_solution"])?.solution ? (
+        queryClient.getQueryData<NewSolutionData>(["new_solution"])?.solution ? (
         <Debug
           isProcessing={debugProcessing}
           setIsProcessing={setDebugProcessing}

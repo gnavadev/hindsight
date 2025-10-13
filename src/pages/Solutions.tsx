@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "react-query";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { dracula } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import ReactMarkdown from "react-markdown";
 import ScreenshotQueue from "../components/features/Queue/ScreenshotQueue";
 import {
   Toast,
   ToastDescription,
-  ToastMessage,
   ToastTitle,
   ToastVariant,
+  ToastMessage,
 } from "../components/ui";
 import {
   NewProblemStatementData,
@@ -19,23 +19,59 @@ import SolutionCommands from "../components/features/Solutions/SolutionCommands"
 import { Theme, useTheme } from "../contexts/ThemeContext";
 import Debug from "./Debug";
 
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Formats code by removing markdown code fences if present
+ */
+const formatCodeContent = (content: string): string => {
+  if (typeof content !== "string") return "";
+  
+  // Remove markdown code blocks
+  return content
+    .replace(/^```[\w]*\n/gm, "")
+    .replace(/\n```$/gm, "")
+    .trim();
+};
+
+/**
+ * Normalizes language identifier for syntax highlighting
+ */
+const normalizeLanguage = (lang: string | null | undefined): string => {
+  if (!lang) return "text";
+  
+  return lang
+    .toLowerCase()
+    .replace("c++", "cpp")
+    .replace("c#", "csharp")
+    .split(/[\s(]/)[0];
+};
+
+// ============================================================================
+// CONTENT SECTION COMPONENT
+// ============================================================================
+
 export const ContentSection = ({
   title,
   content,
   isLoading,
   theme,
+  enableMarkdown = false,
 }: {
   title: string;
   content: React.ReactNode;
   isLoading: boolean;
   theme: Theme;
+  enableMarkdown?: boolean;
 }) => (
   <div className="space-y-2">
     <h2
       className={
         theme === "osrs"
           ? "osrs-header"
-          : "text-[13px] font-medium text-white tracking-wide"
+          : "text-[13px] font-semibold text-white tracking-wide"
       }
     >
       {title}
@@ -57,14 +93,70 @@ export const ContentSection = ({
         className={
           theme === "osrs"
             ? "osrs-content"
-            : "text-[13px] leading-[1.4] text-gray-100 max-w-[600px]"
+            : "text-[13px] leading-relaxed text-gray-100 max-w-[600px]"
         }
       >
-        {content}
+        {enableMarkdown && typeof content === "string" ? (
+          <div className="prose prose-invert prose-sm max-w-none">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => (
+                  <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-semibold text-white">{children}</strong>
+                ),
+                em: ({ children }) => (
+                  <em className="italic text-gray-200">{children}</em>
+                ),
+                code: ({ children }) => (
+                  <code className="px-1.5 py-0.5 bg-gray-800/80 rounded text-xs font-mono text-blue-300">
+                    {children}
+                  </code>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc list-inside space-y-1 mb-3">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal list-inside space-y-1 mb-3">
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => (
+                  <li className="leading-relaxed">{children}</li>
+                ),
+                h1: ({ children }) => (
+                  <h1 className="text-lg font-bold mb-2 text-white">{children}</h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-base font-bold mb-2 text-white">{children}</h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-sm font-semibold mb-2 text-white">{children}</h3>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-2 border-blue-400/50 pl-3 italic text-gray-300 my-2">
+                    {children}
+                  </blockquote>
+                ),
+              }}
+            >
+              {content}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          content
+        )}
       </div>
     )}
   </div>
 );
+
+// ============================================================================
+// COMPLEXITY SECTION COMPONENT
+// ============================================================================
 
 export const ComplexitySection = ({
   timeComplexity,
@@ -82,10 +174,10 @@ export const ComplexitySection = ({
       className={
         theme === "osrs"
           ? "osrs-header"
-          : "text-[13px] font-medium text-white tracking-wide"
+          : "text-[13px] font-semibold text-white tracking-wide"
       }
     >
-      Complexity
+      Complexity Analysis
     </h2>
     {isLoading ? (
       <p
@@ -105,30 +197,111 @@ export const ComplexitySection = ({
           className={
             theme === "osrs"
               ? ""
-              : "flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100"
+              : "flex items-start gap-2 text-[13px] leading-relaxed text-gray-100"
           }
         >
           {theme === "default" && (
-            <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400/80 mt-2 shrink-0" />
           )}
-          <div>Time: {timeComplexity}</div>
+          <div>
+            <span className="font-medium">Time:</span> {timeComplexity}
+          </div>
         </div>
         <div
           className={
             theme === "osrs"
               ? ""
-              : "flex items-start gap-2 text-[13px] leading-[1.4] text-gray-100"
+              : "flex items-start gap-2 text-[13px] leading-relaxed text-gray-100"
           }
         >
           {theme === "default" && (
-            <div className="w-1 h-1 rounded-full bg-blue-400/80 mt-2 shrink-0" />
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400/80 mt-2 shrink-0" />
           )}
-          <div>Space: {spaceComplexity}</div>
+          <div>
+            <span className="font-medium">Space:</span> {spaceComplexity}
+          </div>
         </div>
       </div>
     )}
   </div>
 );
+
+// ============================================================================
+// CODE EXPLANATION COMPONENT
+// ============================================================================
+
+const CodeExplanationSection = ({
+  explanations,
+  isLoading,
+  theme,
+}: {
+  explanations?: Array<{ part: string; explanation: string }>;
+  isLoading: boolean;
+  theme: Theme;
+}) => {
+  if (!explanations || explanations.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <h2
+        className={
+          theme === "osrs"
+            ? "osrs-header"
+            : "text-[13px] font-semibold text-white tracking-wide"
+        }
+      >
+        Code Explanation
+      </h2>
+      {isLoading ? (
+        <p
+          className={
+            theme === "osrs"
+              ? "osrs-content"
+              : "text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse"
+          }
+        >
+          Loading explanation...
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {explanations.map((item, index) => (
+            <div
+              key={index}
+              className={
+                theme === "osrs"
+                  ? "osrs-explanation-block"
+                  : "bg-black/20 p-3 rounded-md border-l-2 border-blue-400/50"
+              }
+            >
+              <p
+                className={
+                  theme === "osrs"
+                    ? "osrs-explanation-title"
+                    : "text-sm font-medium text-blue-300 mb-1"
+                }
+              >
+                {item.part}
+              </p>
+              <p
+                className={
+                  theme === "osrs"
+                    ? "osrs-content"
+                    : "text-[13px] leading-relaxed text-gray-200"
+                }
+              >
+                {item.explanation}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// SOLUTION SECTION COMPONENT
+// ============================================================================
 
 const SolutionSection = ({
   title,
@@ -144,13 +317,15 @@ const SolutionSection = ({
   theme: Theme;
 }) => {
   const [copied, setCopied] = useState(false);
-
-  const displayLanguage = language || "python";
+  
+  // Memoize formatted content to avoid re-processing on every render
+  const formattedContent = useMemo(() => formatCodeContent(content), [content]);
+  const displayLanguage = useMemo(() => normalizeLanguage(language), [language]);
 
   const copyToClipboard = async () => {
-    if (typeof content === "string") {
+    if (typeof formattedContent === "string") {
       try {
-        await window.electronAPI.copyText(content);
+        await window.electronAPI.copyText(formattedContent);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
@@ -165,7 +340,7 @@ const SolutionSection = ({
         className={
           theme === "osrs"
             ? "osrs-header"
-            : "text-[13px] font-medium text-white tracking-wide"
+            : "text-[13px] font-semibold text-white tracking-wide"
         }
       >
         {title}
@@ -189,21 +364,29 @@ const SolutionSection = ({
             language={displayLanguage}
             style={dracula}
             customStyle={{
-              ...dracula,
               maxWidth: "100%",
               margin: 0,
               padding: "1rem",
               whiteSpace: "pre-wrap",
-              wordBreak: "break-all",
+              wordBreak: "break-word",
+              backgroundColor:
+                theme === "osrs" ? "rgba(0,0,0,0.8)" : "rgba(22, 27, 34, 0.5)",
               fontSize: "0.8rem",
+              lineHeight: "1.5",
+              borderRadius: "0.375rem",
             }}
             wrapLongLines={true}
           >
-            {content}
+            {formattedContent}
           </SyntaxHighlighter>
           <button
             onClick={copyToClipboard}
-            className="absolute top-2 right-2 text-xs text-white bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition z-10"
+            className={
+              theme === "osrs"
+                ? "absolute top-2 right-2 text-xs osrs-button px-2 py-1 transition z-10"
+                : "absolute top-2 right-2 text-xs text-white bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition z-10"
+            }
+            aria-label="Copy code to clipboard"
           >
             {copied ? "Copied!" : "Copy"}
           </button>
@@ -213,12 +396,16 @@ const SolutionSection = ({
   );
 };
 
+// ============================================================================
+// ANSWER RENDERER COMPONENT (for Q&A and Multiple Choice)
+// ============================================================================
+
 const AnswerRenderer = ({
   answer,
   isLoading,
   theme,
 }: {
-  answer?: any;
+  answer?: { question: string; correct_option: string }[];
   isLoading: boolean;
   theme: Theme;
 }) => {
@@ -238,47 +425,48 @@ const AnswerRenderer = ({
     );
   }
 
-  if (!answer) return null;
+  if (!answer || !Array.isArray(answer)) {
+    return null;
+  }
 
-  const questionBlocks = answer
-    .split(/(?=###\s+Question\s+\d+)/)
-    .filter((block: string) => block.trim() !== "");
   return (
-    <div className="space-y-2">
-      {questionBlocks.map((block: string, index: number) => (
+    <div className="space-y-3">
+      {answer.map((block, index) => (
         <div
           key={index}
           className={
-            theme === "osrs" ? "osrs-mcq-block" : "bg-black/20 p-3 rounded-md"
+            theme === "osrs"
+              ? "osrs-mcq-block"
+              : "bg-black/20 p-4 rounded-md border-l-2 border-green-400/50"
           }
         >
-          <ReactMarkdown
-            components={{
-              h3: ({ node, ...props }) => (
-                <h3
-                  className={
-                    theme === "osrs"
-                      ? ""
-                      : "text-sm font-semibold mb-1 text-gray-200"
-                  }
-                  {...props}
-                />
-              ),
-              p: ({ node, ...props }) => (
-                <p
-                  className={theme === "osrs" ? "" : "text-xs text-gray-300"}
-                  {...props}
-                />
-              ),
-            }}
+          <p
+            className={
+              theme === "osrs"
+                ? ""
+                : "text-[13px] leading-relaxed text-gray-200 mb-2"
+            }
           >
-            {block}
-          </ReactMarkdown>
+            <span className="font-medium text-gray-100">Q:</span> {block.question}
+          </p>
+          <p
+            className={
+              theme === "osrs"
+                ? "osrs-answer"
+                : "text-[13px] font-semibold text-green-400 mt-2 pl-2"
+            }
+          >
+            <span className="text-green-300">Answer:</span> {block.correct_option}
+          </p>
         </div>
       ))}
     </div>
   );
 };
+
+// ============================================================================
+// MAIN SOLUTIONS COMPONENT
+// ============================================================================
 
 interface SolutionsProps {
   setView: React.Dispatch<
@@ -290,10 +478,25 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
   const { theme } = useTheme();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
-  const handleTooltipVisibilityChange = (visible: boolean, height: number) => {
-    setIsTooltipVisible(visible);
-    setTooltipHeight(height);
-  };
+
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
+
+  const [debugProcessing, setDebugProcessing] = useState(false);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<ToastMessage>({
+    title: "",
+    description: "",
+    variant: "neutral",
+  });
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+  const [tooltipHeight, setTooltipHeight] = useState(0);
+  const [isResetting, setIsResetting] = useState(false);
+
+  // ============================================================================
+  // DATA QUERIES
+  // ============================================================================
 
   const { data: problemStatementData, isLoading: isProblemLoading } =
     useQuery<NewProblemStatementData | null>(["problem_statement"]);
@@ -314,24 +517,32 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
     }
   });
 
-  const problemType = problemStatementData?.problem_type;
-  const language = problemStatementData?.details?.language?.toLowerCase().split(/[\s(]/)[0] || null;
+  // ============================================================================
+  // DERIVED DATA
+  // ============================================================================
+
+  const problemType = problemStatementData?.problem_type as
+    | "coding"
+    | "multiple_choice"
+    | "q_and_a"
+    | "math"
+    | "general_reasoning"
+    | undefined;
+
+  const language = useMemo(
+    () => normalizeLanguage(problemStatementData?.details?.language),
+    [problemStatementData?.details?.language]
+  );
+
   const answerData = solution?.solution?.answer;
   const reasoningData = solution?.solution?.reasoning;
   const timeComplexityData = solution?.solution?.time_complexity ?? null;
   const spaceComplexityData = solution?.solution?.space_complexity ?? null;
+  const codeExplanations = solution?.solution?.code_explanation;
 
-  const [debugProcessing, setDebugProcessing] = useState(false);
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<ToastMessage>({
-    title: "",
-    description: "",
-    variant: "neutral",
-  });
-  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
-  const [tooltipHeight, setTooltipHeight] = useState(0);
-  const [isResetting, setIsResetting] = useState(false);
-  const [audioResult, setAudioResult] = useState<string | null>(null);
+  // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
 
   const showToast = (
     title: string,
@@ -342,14 +553,10 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
     setToastOpen(true);
   };
 
-  const handleAudioResult = (text: string) => {
-    console.log("LOG 2: Solutions.tsx received text. Updating state.");
-    setAudioResult(text);
+  const handleTooltipVisibilityChange = (visible: boolean, height: number) => {
+    setIsTooltipVisible(visible);
+    setTooltipHeight(height);
   };
-  console.log(
-    "LOG 3: Solutions.tsx rendering. Current audioResult is:",
-    audioResult
-  );
 
   const handleDeleteExtraScreenshot = async (index: number) => {
     const screenshotToDelete = extraScreenshots[index];
@@ -361,33 +568,55 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         refetchScreenshots();
       } else {
         console.error("Failed to delete extra screenshot:", response.error);
+        showToast(
+          "Deletion Failed",
+          "Could not delete screenshot. Please try again.",
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error deleting extra screenshot:", error);
+      showToast(
+        "Error",
+        "An unexpected error occurred while deleting the screenshot.",
+        "error"
+      );
     }
   };
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
 
   useEffect(() => {
     const updateDimensions = () => {
       if (contentRef.current) {
         let contentHeight = contentRef.current.scrollHeight;
         const contentWidth = contentRef.current.scrollWidth;
+        
         if (isTooltipVisible) {
           contentHeight += tooltipHeight;
         }
+        
         window.electronAPI.updateContentDimensions({
           width: contentWidth,
           height: contentHeight,
         });
       }
     };
+
     const resizeObserver = new ResizeObserver(updateDimensions);
+    
     if (contentRef.current) {
       resizeObserver.observe(contentRef.current);
     }
+
     updateDimensions();
+
+    // Event listener cleanup functions
     const cleanupFunctions = [
       window.electronAPI.onScreenshotTaken(() => refetchScreenshots()),
+      
       window.electronAPI.onResetView(() => {
         setIsResetting(true);
         queryClient.removeQueries(["solution"]);
@@ -395,15 +624,24 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         refetchScreenshots();
         setTimeout(() => setIsResetting(false), 0);
       }),
+      
       window.electronAPI.onSolutionStart(async () => {
         queryClient.setQueryData(["solution"], null);
       }),
+      
       window.electronAPI.onDebugStart(() => setDebugProcessing(true)),
+      
       window.electronAPI.onDebugSuccess((data) => {
         queryClient.setQueryData(["new_solution"], data);
         setDebugProcessing(false);
         refetchScreenshots();
+        showToast(
+          "Debug Complete",
+          "Your code has been analyzed and corrected.",
+          "success"
+        );
       }),
+      
       window.electronAPI.onDebugError(() => {
         showToast(
           "Processing Failed",
@@ -412,6 +650,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
         );
         setDebugProcessing(false);
       }),
+      
       window.electronAPI.onProcessingNoScreenshots(() => {
         showToast(
           "No Screenshots",
@@ -426,6 +665,85 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
       cleanupFunctions.forEach((cleanup) => cleanup());
     };
   }, [isTooltipVisible, tooltipHeight, queryClient, refetchScreenshots]);
+
+  // ============================================================================
+  // RENDER SOLUTION CONTENT
+  // ============================================================================
+
+  const renderSolutionContent = () => {
+    if (!answerData) return null;
+
+    const listRenderTypes = ["multiple_choice", "q_and_a", "general_reasoning"];
+
+    // Coding problems: Show code with syntax highlighting
+    if (problemType === "coding") {
+      return (
+        <>
+          <SolutionSection
+            title="Solution"
+            content={answerData as string}
+            isLoading={isSolutionLoading}
+            language={language}
+            theme={theme}
+          />
+          
+          {codeExplanations && codeExplanations.length > 0 && (
+            <CodeExplanationSection
+              explanations={codeExplanations}
+              isLoading={isSolutionLoading}
+              theme={theme}
+            />
+          )}
+
+          <ComplexitySection
+            timeComplexity={timeComplexityData}
+            spaceComplexity={spaceComplexityData}
+            isLoading={
+              isSolutionLoading || !timeComplexityData || !spaceComplexityData
+            }
+            theme={theme}
+          />
+        </>
+      );
+    }
+    
+    // Q&A, Multiple Choice, General Reasoning: Show structured answers
+    if (listRenderTypes.includes(problemType || "")) {
+      return (
+        <div className="space-y-2">
+          <h2
+            className={
+              theme === "osrs"
+                ? "osrs-header"
+                : "text-[13px] font-semibold text-white tracking-wide"
+            }
+          >
+            Solution
+          </h2>
+          <AnswerRenderer
+            answer={answerData as { question: string; correct_option: string }[]}
+            isLoading={isSolutionLoading}
+            theme={theme}
+          />
+        </div>
+      );
+    }
+    
+    // Math and other types: Show in code box for better formatting
+    return (
+      <SolutionSection
+        title="Solution"
+        content={answerData as string}
+        isLoading={isSolutionLoading}
+        language="text"
+        theme={theme}
+      />
+    );
+  };
+
+  // ============================================================================
+  // MAIN RENDER
+  // ============================================================================
 
   return (
     <>
@@ -450,6 +768,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
             <ToastDescription>{toastMessage.description}</ToastDescription>
           </Toast>
 
+          {/* Screenshot Queue */}
           {answerData && (
             <div className="bg-transparent w-fit">
               <div className="pb-3">
@@ -465,29 +784,34 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
             </div>
           )}
 
+          {/* Solution Commands */}
           <SolutionCommands
             extraScreenshots={extraScreenshots}
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
           />
 
+          {/* Main Content Container */}
           <div
             className={
               theme === "osrs"
-                ? "w-full text-sm  osrs-container rounded-md"
-                : "w-full text-sm bg-black/60 rounded-md"
+                ? "w-full text-sm osrs-container rounded-md"
+                : "w-full text-sm bg-black/60 rounded-md backdrop-blur-sm"
             }
           >
             <div className="rounded-lg overflow-hidden">
               <div className="px-4 py-3 space-y-4 max-w-full">
+                {/* Problem Statement */}
                 <ContentSection
-                  title={"Problem Statement"}
+                  title="Problem Statement"
                   content={problemStatementData?.problem_statement}
                   isLoading={isProblemLoading || !problemStatementData}
                   theme={theme}
                 />
 
+                {/* Loading State */}
                 {problemStatementData && !answerData && (
-                  <div className="mt-4 flex">
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
                     <p
                       className={
                         theme === "osrs"
@@ -495,59 +819,27 @@ const Solutions: React.FC<SolutionsProps> = ({ setView: _setView }) => {
                           : "text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse"
                       }
                     >
-                      Generating solution...
+                      Generating optimal solution...
                     </p>
                   </div>
                 )}
 
+                {/* Solution Content */}
                 {answerData && (
                   <>
-                    <ContentSection
-                      title="Analysis / Reasoning"
-                      content={reasoningData}
-                      isLoading={isSolutionLoading}
-                      theme={theme}
-                    />
-
-                    {problemType === "coding" ? (
-                      <SolutionSection
-                        title="Solution"
-                        content={answerData}
+                    {/* Reasoning Section */}
+                    {reasoningData && (
+                      <ContentSection
+                        title="Analysis & Reasoning"
+                        content={reasoningData}
                         isLoading={isSolutionLoading}
-                        language={language}
                         theme={theme}
+                        enableMarkdown={true}
                       />
-                    ) : (
-                      <div className="space-y-2">
-                        <h2
-                          className={
-                            theme === "osrs"
-                              ? "osrs-header"
-                              : "text-[13px] font-medium text-white tracking-wide"
-                          }
-                        >
-                          Solution
-                        </h2>
-                        <AnswerRenderer
-                          answer={answerData}
-                          isLoading={isSolutionLoading}
-                          theme={theme}
-                        />
-                      </div>
                     )}
 
-                    {problemType === "coding" && (
-                      <ComplexitySection
-                        timeComplexity={timeComplexityData}
-                        spaceComplexity={spaceComplexityData}
-                        isLoading={
-                          isSolutionLoading ||
-                          !timeComplexityData ||
-                          !spaceComplexityData
-                        }
-                        theme={theme}
-                      />
-                    )}
+                    {/* Render appropriate solution format */}
+                    {renderSolutionContent()}
                   </>
                 )}
               </div>

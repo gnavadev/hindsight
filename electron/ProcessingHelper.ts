@@ -129,10 +129,13 @@ export class ProcessingHelper {
         mimeType
       );
       
+      // --- FIX START: Safe logging ---
+      const safeStatement = problemInfo.problem_statement || "No statement provided";
       console.log("[Audio Processing] Step 2: Problem extracted successfully:", {
         type: problemInfo.problem_type,
-        statement: problemInfo.problem_statement.substring(0, 100) + "...",
+        statement: safeStatement.substring(0, 100) + "...",
       });
+      // --- FIX END ---
 
       // Send problem info to renderer
       mainWindow.webContents.send(
@@ -221,9 +224,23 @@ export class ProcessingHelper {
         screenshotQueue
       );
       
+// --- FIX: Smarter logging that checks details if statement is empty ---
+      console.log("[Initial Processing] Step 2: Extraction Complete. Full Data:", JSON.stringify(problemInfo, null, 2));
+      let logStatement = problemInfo.problem_statement;
+      
+      // If statement is empty, peek into details to see what we actually got
+      if (!logStatement && problemInfo.details) {
+         if (problemInfo.details.code_snippet) {
+             logStatement = "[Code Snippet Present] " + problemInfo.details.code_snippet.substring(0, 50);
+         } else if (problemInfo.details.question) {
+             logStatement = "[Question Present] " + problemInfo.details.question.substring(0, 50);
+         }
+      }
+
       console.log("[Initial Processing] Step 2: Problem extracted successfully:", {
         type: problemInfo.problem_type,
-        statement: problemInfo.problem_statement.substring(0, 100) + "...",
+        // Default to a fallback string if we truly found nothing
+        statement: (logStatement || "No textual statement found").substring(0, 100) + "...",
       });
 
       // Send problem info to renderer

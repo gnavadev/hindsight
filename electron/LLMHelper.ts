@@ -1,7 +1,10 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerativeModel, GenerationConfig } from "@google/generative-ai";
 import fs from "fs";
 
-// Type definitions for better type safety
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
 interface AudioAnalysisResult {
   problem_type: string;
   problem_statement: string;
@@ -27,131 +30,106 @@ interface SolutionResponse {
   alternative_solutions?: any[];
 }
 
+// ============================================================================
+// LLM HELPER CLASS
+// ============================================================================
+
 export class LLMHelper {
   private model: GenerativeModel;
+  
+  // Using the model you confirmed works.
+  private readonly MODEL_NAME = "gemini-2.5-pro"; 
+
   private readonly systemPrompt = `You are Hindsight AI, an expert assistant specializing in problem analysis and solution generation.
 
 Your core competencies include:
-- **Software Engineering**: Analyzing code, debugging errors, optimizing algorithms, and providing production-ready solutions
-- **Academic Support**: Solving problems across mathematics, sciences, humanities, and standardized tests
-- **General Problem-Solving**: Interpreting diagrams, charts, visual data, and complex reasoning tasks
+- **Software Engineering**: Analyzing code, debugging errors, optimizing algorithms.
+- **Academic Support**: Solving problems across mathematics, sciences, humanities.
+- **General Problem-Solving**: Interpreting visual data and complex reasoning.
 
 Your approach:
-1. Carefully analyze the problem to understand its type and requirements
-2. Classify the problem accurately into one of: coding, multiple_choice, q_and_a, general_reasoning, or math
-3. Extract all relevant details systematically
-4. Provide clear, structured, and actionable solutions`;
+1. Classify the problem accurately.
+2. Extract all relevant details systematically.
+3. Provide clear, structured, and actionable solutions.`;
 
   constructor(apiKey: string) {
     const genAI = new GoogleGenerativeAI(apiKey);
     this.model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-lite",
-      // model: "gemini-2.5-pro",
+      model: this.MODEL_NAME,
     });
   }
 
   /**
-   * Analyzes audio from base64 data, transcribes it, and extracts problem information
+   * Wrapper to handle Rate Limits (429) and Server Errors (503) with Exponential Backoff
+   */
+  private async generateWithRetry(
+    parts: any[], 
+    config: GenerationConfig = {},
+    maxRetries = 3
+  ): Promise<string> {
+    let attempt = 0;
+    
+    while (attempt <= maxRetries) {
+      try {
+        const result = await this.model.generateContent({
+          contents: [{ role: "user", parts: parts }],
+          generationConfig: config,
+        });
+        return result.response.text();
+
+      } catch (error: any) {
+        attempt++;
+        
+        const isRateLimit = error.status === 429 || error.message?.includes("429") || error.message?.includes("Quota");
+        const isOverload = error.status === 503;
+
+        if ((isRateLimit || isOverload) && attempt <= maxRetries) {
+          const delayMs = Math.pow(2, attempt) * 2000; 
+          console.warn(`[LLMHelper] Quota hit. Retrying in ${delayMs}ms (Attempt ${attempt}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error("Max retries exceeded.");
+  }
+
+  /**
+   * Analyzes audio from base64 data
    */
   public async analyzeAudioFromBase64(
     data: string,
     mimeType: string
   ): Promise<AudioAnalysisResult> {
     try {
-      const audioPart = {
-        inlineData: { data, mimeType },
-      };
+      const audioPart = { inlineData: { data, mimeType } };
 
-      // Step 1: Transcribe audio
-      const transcriptionPrompt = `Transcribe the following audio clip accurately. 
-Output ONLY the transcribed text with no additional commentary, formatting, or metadata.`;
+      const transcriptionPrompt = `Transcribe the following audio clip accurately. Output ONLY the transcribed text.`;
+      const transcribedText = (await this.generateWithRetry(
+        [{ text: transcriptionPrompt }, audioPart]
+      )).trim();
 
-      const transcriptionResult = await this.model.generateContent([
-        transcriptionPrompt,
-        audioPart,
-      ]);
-      const transcribedText = transcriptionResult.response.text().trim();
+      if (!transcribedText) throw new Error("Audio transcription failed.");
 
-      if (!transcribedText) {
-        throw new Error("Audio transcription failed or returned empty text.");
-      }
-
-      // Step 2: Analyze transcribed text and extract problem structure
       const analysisPrompt = `${this.systemPrompt}
 
-Analyze the following transcribed text and perform two tasks:
-
-1. **Classify the Problem Type**: Determine which category best fits:
-   - 'coding': Programming tasks, debugging, algorithm questions
-   - 'multiple_choice': Quiz questions with multiple options
-   - 'q_and_a': Open-ended questions requiring detailed answers
-   - 'math': Mathematical problems requiring calculations
-   - 'general_reasoning': Logic puzzles, interpretations, analysis tasks
-
-2. **Extract Structured Details**: Based on classification, extract information into the appropriate JSON format.
+Analyze the transcribed text:
+1. Classify: 'coding', 'multiple_choice', 'q_and_a', 'math', or 'general_reasoning'
+2. Extract Details: JSON format.
 
 **TRANSCRIBED TEXT:**
----
 ${transcribedText}
----
 
-**REQUIRED OUTPUT FORMAT:**
+**OUTPUT:** Valid JSON object only.`;
 
-Respond with ONLY a valid JSON object. No markdown, no code blocks, no additional text.
+      const jsonText = await this.generateWithRetry(
+        [{ text: analysisPrompt }],
+        { responseMimeType: "application/json" }
+      );
 
-**Examples by Problem Type:**
-
-For 'coding':
-{
-  "problem_type": "coding",
-  "problem_statement": "Clear summary of the coding task or error",
-  "details": {
-    "language": "python",
-    "code_snippet": "The relevant code from the transcription",
-    "error_message": "Any error message mentioned (or empty string if none)"
-  }
-}
-
-For 'multiple_choice':
-{
-  "problem_type": "multiple_choice",
-  "problem_statement": "Summary of the quiz topic",
-  "details": {
-    "questions": [
-      {
-        "question_text": "Full text of the question",
-        "options": ["Option A text", "Option B text", "Option C text", "Option D text"]
-      }
-    ]
-  }
-}
-
-For 'q_and_a', 'math', or 'general_reasoning':
-{
-  "problem_type": "q_and_a",
-  "problem_statement": "The main question being asked",
-  "details": {
-    "question": "Full question text",
-    "context": "Any relevant background information or constraints"
-  }
-}`;
-
-      const analysisResult = await this.model.generateContent(analysisPrompt);
-      const rawText = analysisResult.response.text();
-      const cleanText = this.cleanJsonResponse(rawText);
-
-      if (!cleanText) {
-        throw new Error(
-          "Could not extract valid JSON from the audio analysis response."
-        );
-      }
-
-      return JSON.parse(cleanText);
+      return JSON.parse(this.cleanJsonResponse(jsonText));
     } catch (error) {
-      if (error instanceof SyntaxError) {
-        console.error("[LLMHelper] JSON parsing error in audio analysis:", error);
-        throw new Error("The AI response was not valid JSON. Please try again.");
-      }
       console.error("[LLMHelper] Error in analyzeAudioFromBase64:", error);
       throw error;
     }
@@ -165,80 +143,68 @@ For 'q_and_a', 'math', or 'general_reasoning':
   ): Promise<ProblemInfo> {
     const prompt = `${this.systemPrompt}
 
-Analyze the provided image(s) and extract problem information:
+Analyze the provided image(s).
 
-1. **Understand the Content**: Carefully examine all images to understand the complete problem
-2. **Classify the Problem Type**: Determine which category fits. **If the image contains a code snippet, error message, or is primarily about a programming task, it MUST be classified as 'coding', even if there is a natural language question present.** The 'q_and_a' category is for questions that do NOT primarily involve code.
-   - 'coding': Code snippets, error messages, programming tasks
-   - 'multiple_choice': Questions with multiple choice options
-   - 'q_and_a': Questions requiring detailed answers
-   - 'math': Mathematical equations, calculations, proofs
-   - 'general_reasoning': Logic problems, interpretations, analysis
+**STEP 1: CLASSIFY THE PROBLEM TYPE**
+Determine the category based on visual content:
+- 'coding': If the image contains code snippets, IDE screenshots, or error messages. **(Priority: If code is visible, it is ALWAYS 'coding')**
+- 'multiple_choice': If it looks like a quiz with labeled options (A, B, C, D).
+- 'math': If it contains mathematical equations, geometry, or calculus.
+- 'q_and_a': General text-based questions.
+- 'general_reasoning': Logic puzzles, charts, or data analysis.
 
-3. **Extract Structured Data**: Format the information according to the problem type
+**STEP 2: EXTRACT DATA INTO STRICT JSON**
+You must return a FLAT JSON object. **DO NOT** nest content inside a "data" key.
 
-**OUTPUT REQUIREMENTS:**
+**REQUIRED JSON SCHEMAS:**
 
-Return ONLY a valid JSON object. No markdown, no code blocks, no explanations.
-
-**JSON Format Examples:**
-
-For 'coding':
+**Type 1: 'coding'**
 {
   "problem_type": "coding",
-  "problem_statement": "Concise summary of the coding task or error",
+  "problem_statement": "FULL text of the problem description/question",
   "details": {
-    "language": "javascript",
-    "code_snippet": "The complete code visible in the image(s)",
-    "error_message": "Any error messages shown (or empty string)"
+    "language": "python", 
+    "code_snippet": "The raw code text visible in the image",
+    "error_message": "Any visible error text"
   }
 }
 
-For 'multiple_choice':
+**Type 2: 'multiple_choice'**
 {
   "problem_type": "multiple_choice",
-  "problem_statement": "Topic or subject of the question(s)",
+  "problem_statement": "The main question text",
   "details": {
-    "questions": [
-      {
-        "question_text": "Complete question text",
-        "options": ["A: First option", "B: Second option", "C: Third option", "D: Fourth option"]
-      }
-    ]
+    "options": ["Option A", "Option B", "Option C", "Option D"]
   }
 }
 
-For 'q_and_a', 'math', or 'general_reasoning':
+**Type 3: 'math' / 'q_and_a' / 'general_reasoning'**
 {
-  "problem_type": "q_and_a",
-  "problem_statement": "The primary question or task",
+  "problem_type": "q_and_a", 
+  "problem_statement": "The full question or task",
   "details": {
-    "question": "Complete question with all relevant parts",
-    "context": "Any diagrams, equations, or supporting information described"
+    "context": "Any additional context or constraints"
   }
-}`;
+}
+
+**CRITICAL CONSTRAINTS:**
+1. **Root Level Only**: 'problem_statement' must be at the top level.
+2. **No Infinite Loops**: Do not generate endless test cases.
+3. **Stop Token**: Stop generating immediately after the closing '}' of the JSON object.
+`;
 
     try {
       const imageParts = await Promise.all(
         imagePaths.map((path) => this.fileToGenerativePart(path))
       );
 
-      const result = await this.model.generateContent([prompt, ...imageParts]);
-      const rawText = result.response.text();
-      const cleanText = this.cleanJsonResponse(rawText);
+      const jsonText = await this.generateWithRetry(
+        [{ text: prompt }, ...imageParts],
+        { responseMimeType: "application/json" }
+      );
 
-      if (!cleanText) {
-        throw new Error(
-          "Could not extract valid JSON from the image analysis response."
-        );
-      }
-
-      return JSON.parse(cleanText);
+      return JSON.parse(this.cleanJsonResponse(jsonText));
     } catch (error) {
-      if (error instanceof SyntaxError) {
-        console.error("[LLMHelper] JSON parsing error in extractProblemFromImages:", error);
-        throw new Error("The AI response was not valid JSON. Please try again.");
-      }
       console.error("[LLMHelper] Error extracting problem from images:", error);
       throw error;
     }
@@ -251,192 +217,16 @@ For 'q_and_a', 'math', or 'general_reasoning':
     const prompt = this.buildSolutionPrompt(problemInfo);
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const rawText = result.response.text();
-      const cleanText = this.cleanJsonResponse(rawText);
+      const jsonText = await this.generateWithRetry(
+        [{ text: prompt }],
+        { responseMimeType: "application/json" }
+      );
 
-      if (!cleanText) {
-        throw new Error(
-          "Could not extract valid JSON from the solution generation response."
-        );
-      }
-
-      return JSON.parse(cleanText);
+      return JSON.parse(this.cleanJsonResponse(jsonText));
     } catch (error) {
-      if (error instanceof SyntaxError) {
-        console.error("[LLMHelper] JSON parsing error in generateSolution:", error);
-        throw new Error("The AI response was not valid JSON. Please try again.");
-      }
       console.error("[LLMHelper] Error in generateSolution:", error);
-      throw error;
+      throw new Error("Failed to generate valid JSON solution.");
     }
-  }
-
-  /**
-   * Builds the appropriate prompt based on problem type
-   */
-  private buildSolutionPrompt(problemInfo: ProblemInfo): string {
-    switch (problemInfo.problem_type) {
-      case "coding":
-        return this.buildCodingPrompt(problemInfo);
-      case "multiple_choice":
-      case "q_and_a":
-      case "general_reasoning":
-        return this.buildQAPrompt(problemInfo);
-      case "math":
-      default:
-        return this.buildMathPrompt(problemInfo);
-    }
-  }
-
-  /**
-   * Builds prompt for coding problems
-   */
-  private buildCodingPrompt(problemInfo: ProblemInfo): string {
-    return `You are a senior software engineer and competitive programming expert.
-
-**OBJECTIVE**: Generate the most optimal, production-ready solution possible.
-
-**PRIORITIES** (in order):
-1. **Correctness**: Solution must handle all edge cases correctly
-2. **Time Complexity**: Minimize Big O time complexity
-3. **Space Complexity**: Minimize Big O space complexity
-4. **Code Quality**: Clean, readable, well-documented code
-
-**PROBLEM DETAILS:**
-${JSON.stringify(problemInfo, null, 2)}
-
-**RESPONSE REQUIREMENTS:**
-
-1. **Solution Code**:
-   - Write the most efficient algorithm possible
-   - Include detailed inline comments explaining:
-     * Key algorithmic decisions
-     * Data structure choices
-     * Edge case handling
-     * Complex logic sections
-   - Use clear variable names
-   - Follow best practices for the language
-
-2. **High-Level Explanation**:
-   - Explain the approach at a conceptual level
-   - Justify data structure and algorithm choices
-   - Explain why this approach is optimal
-   - Suitable for technical interview discussion
-
-3. **Complexity Analysis**:
-   - Provide accurate Big O notation for time and space
-   - Brief justification for each
-
-4. **Alternative Solutions** (if applicable):
-   - If meaningful trade-offs exist (e.g., time vs space)
-   - Explain when the alternative might be preferred
-
-**OUTPUT FORMAT:**
-
-Return ONLY a valid JSON object:
-
-{
-  "solution": {
-    "focus": "Time Complexity",
-    "answer": "def solution(nums):\\n    # HashMap for O(1) lookup\\n    seen = {}\\n    for i, num in enumerate(nums):\\n        # Check if complement exists\\n        if target - num in seen:\\n            return [seen[target - num], i]\\n        seen[num] = i\\n    return []",
-    "reasoning": "High-level explanation of the approach and why it's optimal...",
-    "time_complexity": "O(n)",
-    "space_complexity": "O(n)",
-    "code_explanation": [
-      {
-        "part": "HashMap usage",
-        "explanation": "We use a HashMap to achieve O(1) lookups, trading space for time..."
-      },
-      {
-        "part": "Single pass algorithm",
-        "explanation": "By checking for the complement during insertion, we only need one pass..."
-      }
-    ]
-  },
-  "alternative_solutions": [
-    {
-      "focus": "Space Complexity",
-      "approach": "Two pointer technique with sorted array",
-      "time_complexity": "O(n log n)",
-      "space_complexity": "O(1)",
-      "trade_off": "Better space complexity but requires sorting"
-    }
-  ]
-}`;
-  }
-
-  /**
-   * Builds prompt for Q&A style problems
-   */
-  private buildQAPrompt(problemInfo: ProblemInfo): string {
-    return `You are a knowledgeable expert across multiple domains.
-
-**OBJECTIVE**: Provide accurate, clear, and helpful answers.
-
-**PROBLEM DETAILS:**
-${JSON.stringify(problemInfo, null, 2)}
-
-**RESPONSE REQUIREMENTS:**
-
-1. **Answer Accuracy**: Ensure all answers are factually correct
-2. **Clarity**: Present answers in a clear, understandable format
-3. **Completeness**: Address all parts of each question
-4. **Conciseness**: Be thorough but avoid unnecessary verbosity
-
-**OUTPUT FORMAT:**
-
-Return ONLY a valid JSON object:
-
-{
-  "solution": {
-    "answer": [
-      {
-        "question": "What is the capital of France?",
-        "correct_option": "Paris is the capital and largest city of France."
-      },
-      {
-        "question": "When was the Eiffel Tower built?",
-        "correct_option": "The Eiffel Tower was built between 1887 and 1889."
-      }
-    ]
-  }
-}
-
-**NOTES:**
-- For multiple choice: State the correct option clearly
-- For Q&A: Provide a complete answer to the question
-- For general reasoning: Explain your reasoning process`;
-  }
-
-  /**
-   * Builds prompt for math problems
-   */
-  private buildMathPrompt(problemInfo: ProblemInfo): string {
-    return `You are a mathematics expert with deep knowledge across all mathematical domains.
-
-**OBJECTIVE**: Solve the mathematical problem with clear step-by-step explanations.
-
-**PROBLEM DETAILS:**
-${JSON.stringify(problemInfo, null, 2)}
-
-**RESPONSE REQUIREMENTS:**
-
-1. **Solution**: Present the final answer clearly
-2. **Work**: Show all steps in your solution
-3. **Formatting**: Use proper mathematical notation
-4. **Clarity**: Explain each major step
-
-**OUTPUT FORMAT:**
-
-Return ONLY a valid JSON object:
-
-{
-  "solution": {
-    "answer": "Step 1: Identify the problem type\\n\\nThis is a quadratic equation in the form ax² + bx + c = 0\\n\\nStep 2: Apply the quadratic formula\\n\\nx = [-b ± √(b² - 4ac)] / (2a)\\n\\nStep 3: Substitute values\\n\\na = 1, b = -5, c = 6\\nx = [5 ± √(25 - 24)] / 2\\nx = [5 ± 1] / 2\\n\\nStep 4: Calculate solutions\\n\\nx₁ = (5 + 1) / 2 = 3\\nx₂ = (5 - 1) / 2 = 2\\n\\nFinal Answer: x = 2 or x = 3",
-    "reasoning": "This quadratic equation can be solved using the quadratic formula. The discriminant is positive (b² - 4ac = 1), indicating two distinct real solutions."
-  }
-}`;
   }
 
   /**
@@ -452,226 +242,162 @@ Return ONLY a valid JSON object:
         debugImagePaths.map((path) => this.fileToGenerativePart(path))
       );
 
-      // Step 1: Analyze the error
+      // 1. Get Textual Analysis of the visual error
       const errorAnalysis = await this._analyzeDebugError(
         currentCode,
         imageParts
       );
 
-      if (!errorAnalysis?.trim()) {
-        throw new Error(
-          "Error analysis failed to produce a description of the issue."
-        );
-      }
+      if (!errorAnalysis?.trim()) throw new Error("Error analysis failed.");
 
-      // Step 2: Generate corrected code
+      // 2. Generate Corrected Code
       const synthesisPrompt = `${this.systemPrompt}
 
-You are a debugging and code correction expert.
+You are a debugging expert.
+**ORIGINAL PROBLEM:** ${JSON.stringify(problemInfo)}
+**INCORRECT CODE:** \n${currentCode}\n
+**ERROR ANALYSIS:** ${errorAnalysis}
 
-**ORIGINAL PROBLEM:**
-${JSON.stringify(problemInfo, null, 2)}
+**TASK:**
+Fix the code based on the error analysis.
 
-**INCORRECT CODE:**
-\`\`\`
-${currentCode}
-\`\`\`
-
-**ERROR ANALYSIS:**
-${errorAnalysis}
-
-**YOUR TASK:**
-
-Generate corrected code that fixes the identified issues while maintaining optimal performance.
-
-**REQUIREMENTS:**
-
-1. **Fix the Error**: Implement the correction described in the error analysis
-2. **Maintain Efficiency**: Ensure the fix doesn't compromise time/space complexity
-3. **Add Comments**: Include inline comments explaining the fix
-4. **Complete Code**: Provide the full corrected code, not just the changed parts
-
-**OUTPUT FORMAT:**
-
-Return ONLY a valid JSON object:
-
+**RESPONSE FORMAT (Strict JSON):**
 {
   "solution": {
-    "answer": "The complete corrected code with comments explaining the fix",
-    "reasoning": "${errorAnalysis.replace(/"/g, '\\"')}",
+    "answer": "THE COMPLETE CORRECTED CODE. Do not truncate. Return the full file so diffs work.",
+    "reasoning": "Explain exactly what was fixed and why based on the error analysis.",
+    "focus": "Debugging",
     "time_complexity": "O(n)",
-    "space_complexity": "O(1)",
-    "suggested_next_steps": [
-      "Test with edge cases",
-      "Verify the fix handles all error conditions"
-    ]
+    "space_complexity": "O(n)"
   }
-}`;
+}
+`;
 
-      const result = await this.model.generateContent(synthesisPrompt);
-      const rawText = result.response.text();
-      const cleanText = this.cleanJsonResponse(rawText);
+      const jsonText = await this.generateWithRetry(
+        [{ text: synthesisPrompt }],
+        { responseMimeType: "application/json" }
+      );
 
-      if (!cleanText) {
-        throw new Error(
-          "Could not extract valid JSON from the debug response."
-        );
-      }
-
+      const cleanText = this.cleanJsonResponse(jsonText);
       const parsed: SolutionResponse = JSON.parse(cleanText);
 
-      // Format code with language-specific markdown
-      if (problemInfo.problem_type === "coding" && parsed.solution?.answer) {
-        const language =
-          problemInfo.details?.language?.toLowerCase() || "python";
-        const normalizedLang = language
-          .replace("c++", "cpp")
-          .split(/[\s(]/)[0];
-        parsed.solution.answer = `\`\`\`${normalizedLang}\n${parsed.solution.answer}\n\`\`\``;
+      // 3. Ensure strict type safety and markdown wrapping
+      if (
+        problemInfo.problem_type === "coding" && 
+        parsed.solution?.answer && 
+        typeof parsed.solution.answer === 'string' 
+      ) {
+        const language = problemInfo.details?.language?.toLowerCase() || "python";
+        if (!parsed.solution.answer.startsWith("```")) {
+            parsed.solution.answer = `\`\`\`${language}\n${parsed.solution.answer}\n\`\`\``;
+        }
       }
 
       return parsed;
     } catch (error) {
-      if (error instanceof SyntaxError) {
-        console.error("[LLMHelper] JSON parsing error in debugSolutionWithImages:", error);
-        throw new Error("The AI response was not valid JSON. Please try again.");
-      }
       console.error("[LLMHelper] Error in debugSolutionWithImages:", error);
       throw error;
     }
   }
 
   /**
-   * Analyzes code and error images to identify the issue
+   * Analyzes debug images (Plain Text Response)
+   * FIX: Explicitly asks to read Console/Terminal output
    */
   private async _analyzeDebugError(
     incorrectCode: string,
     errorImageParts: any[]
   ): Promise<string> {
-    const analysisPrompt = `You are a senior debugging expert with deep expertise in identifying and explaining code errors.
+    const analysisPrompt = `
+Analyze the provided screenshot(s) for debugging.
 
-**TASK**: Analyze the provided code and error message(s) in the attached image(s).
+**LOOK FOR:**
+1. **Console/Terminal Output**: Read any text in the "Run" or "Console" panels. Look for "SyntaxError", "Runtime Error", or stack traces.
+2. **Visual Indicators**: Look for red squiggles, error icons, or highlighted lines in the code editor.
+3. **The Code**: Compare the visible code against the console errors.
 
-**INCORRECT CODE:**
-\`\`\`
-${incorrectCode}
-\`\`\`
-
-**REQUIREMENTS:**
-
-Provide a concise analysis that includes:
-1. **Root Cause**: What is causing the error?
-2. **Specific Issue**: Which line(s) or logic are problematic?
-3. **Required Fix**: What needs to be changed to resolve the issue?
-4. **Why It Matters**: Briefly explain why this error occurs
-
-**FORMAT**: Plain text explanation (no JSON, no code). Be direct and actionable.`;
-
-    const result = await this.model.generateContent([
-      analysisPrompt,
-      ...errorImageParts,
+**OUTPUT:**
+Provide a concise root cause analysis. Quote the specific error message if visible in the screenshot.
+`;
+    
+    return await this.generateWithRetry([
+        { text: analysisPrompt },
+        ...errorImageParts
     ]);
-
-    return result.response.text();
   }
 
-  /**
-   * Analyzes an audio file (legacy support)
-   */
+  // ============================================================================
+  // HELPERS & PROMPTS
+  // ============================================================================
+
+  private buildSolutionPrompt(problemInfo: ProblemInfo): string {
+    switch (problemInfo.problem_type) {
+      case "coding": return this.buildCodingPrompt(problemInfo);
+      case "multiple_choice":
+      case "q_and_a":
+      case "general_reasoning": return this.buildQAPrompt(problemInfo);
+      case "math":
+      default: return this.buildMathPrompt(problemInfo);
+    }
+  }
+
+  private buildCodingPrompt(problemInfo: ProblemInfo): string {
+    return `You are a senior software engineer.
+**OBJECTIVE**: Generate optimal solution.
+**PROBLEM DETAILS:** ${JSON.stringify(problemInfo, null, 2)}
+**RESPONSE REQUIREMENTS:**
+Return a JSON object:
+{ "solution": { "focus": "Time Complexity", "answer": "code...", "reasoning": "...", "time_complexity": "...", "space_complexity": "...", "code_explanation": [] }, "alternative_solutions": [] }`;
+  }
+
+  private buildQAPrompt(problemInfo: ProblemInfo): string {
+    return `You are a knowledgeable expert.
+**PROBLEM DETAILS:** ${JSON.stringify(problemInfo, null, 2)}
+**RESPONSE REQUIREMENTS:**
+Return a JSON object: { "solution": { "answer": "Detailed answer or options", "reasoning": "..." } }`;
+  }
+
+  private buildMathPrompt(problemInfo: ProblemInfo): string {
+    return `You are a mathematics expert.
+**PROBLEM DETAILS:** ${JSON.stringify(problemInfo, null, 2)}
+**RESPONSE REQUIREMENTS:**
+Return a JSON object: { "solution": { "answer": "Step-by-step solution", "reasoning": "..." } }`;
+  }
+
   public async analyzeAudioFile(audioPath: string) {
     try {
       const audioData = await fs.promises.readFile(audioPath);
-      const audioPart = {
-        inlineData: {
-          data: audioData.toString("base64"),
-          mimeType: "audio/mp3",
-        },
-      };
-
-      const prompt = `${this.systemPrompt}
-
-Analyze this audio clip and provide:
-1. A concise description of what you hear
-2. 2-3 relevant follow-up actions or suggestions based on the content
-
-Be natural and conversational. No JSON format needed.`;
-
-      const result = await this.model.generateContent([prompt, audioPart]);
-      const text = result.response.text();
-
+      const text = await this.generateWithRetry([
+        { text: "Describe what you hear concisely." },
+        { inlineData: { data: audioData.toString("base64"), mimeType: "audio/mp3" } }
+      ]);
       return { text, timestamp: Date.now() };
-    } catch (error) {
-      console.error("[LLMHelper] Error analyzing audio file:", error);
-      throw error;
-    }
+    } catch (error) { return { text: "Error analyzing audio", timestamp: Date.now() }; }
   }
 
-  /**
-   * Analyzes an image file (legacy support)
-   */
   public async analyzeImageFile(imagePath: string) {
     try {
       const imageData = await fs.promises.readFile(imagePath);
-      const imagePart = {
-        inlineData: {
-          data: imageData.toString("base64"),
-          mimeType: "image/png",
-        },
-      };
-
-      const prompt = `${this.systemPrompt}
-
-Analyze this image concisely:
-1. Describe what you see in 1-2 sentences
-2. Suggest 2-3 relevant actions the user could take
-
-Be brief and actionable. No JSON format needed.`;
-
-      const result = await this.model.generateContent([prompt, imagePart]);
-      const text = result.response.text();
-
+      const text = await this.generateWithRetry([
+        { text: "Describe this image concisely." },
+        { inlineData: { data: imageData.toString("base64"), mimeType: "image/png" } }
+      ]);
       return { text, timestamp: Date.now() };
-    } catch (error) {
-      console.error("[LLMHelper] Error analyzing image file:", error);
-      throw error;
-    }
+    } catch (error) { return { text: "Error analyzing image", timestamp: Date.now() }; }
   }
 
-  /**
-   * Converts a file to a generative part for the AI model
-   */
   private async fileToGenerativePart(imagePath: string) {
     const imageData = await fs.promises.readFile(imagePath);
-    return {
-      inlineData: {
-        data: imageData.toString("base64"),
-        mimeType: "image/png",
-      },
-    };
+    return { inlineData: { data: imageData.toString("base64"), mimeType: "image/png" } };
   }
 
-  /**
-   * Cleans and extracts JSON from AI response text
-   */
   private cleanJsonResponse(text: string): string {
-    // Remove markdown code blocks if present
-    let cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "");
-
+    let cleaned = text.trim();
+    if (cleaned.startsWith("```")) cleaned = cleaned.replace(/^```(?:json)?/, "").replace(/```$/, "");
+    cleaned = cleaned.trim();
     const firstBracket = cleaned.indexOf("{");
     const lastBracket = cleaned.lastIndexOf("}");
-
-    if (
-      firstBracket === -1 ||
-      lastBracket === -1 ||
-      lastBracket < firstBracket
-    ) {
-      console.error(
-        "[LLMHelper] Could not find valid JSON object in response:",
-        text.substring(0, 200)
-      );
-      return "";
-    }
-
+    if (firstBracket === -1 || lastBracket === -1 || lastBracket < firstBracket) return text; 
     return cleaned.substring(firstBracket, lastBracket + 1);
   }
 }

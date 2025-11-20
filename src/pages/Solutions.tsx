@@ -404,9 +404,32 @@ const SolutionSection = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
-  // Memoize formatted content to avoid re-processing on every render
+  // 1. FORCEFUL LANGUAGE DETECTION
+  console.log(language)
+  const displayLanguage = useMemo(() => {
+    // Priority 1: Prop passed from backend (if valid)
+    if (language && language !== "text" && language !== "unknown") {
+        return normalizeLanguage(language);
+    }
+
+    // Priority 2: Regex check on the content string
+    // We check for ```python, ```javascript, etc.
+    const match = content.match(/^```(\w+)/);
+    if (match && match[1]) {
+        return normalizeLanguage(match[1]);
+    }
+
+    // Priority 3: Hard Fallback
+    // If we have absolutely no clue, use "javascript".
+    // Why? Because generic C-style syntax highlighting (colors for strings, numbers, braces)
+    // looks better than plain white text for 90% of languages (Java, C, C++, JS, TS, Rust).
+    return "javascript"; 
+  }, [language, content]);
+
+  console.log(displayLanguage)
+
+  // 2. Format content (strip markdown fences for the Highlighter)
   const formattedContent = useMemo(() => formatCodeContent(content), [content]);
-  const displayLanguage = useMemo(() => normalizeLanguage(language), [language]);
 
   const copyToClipboard = async () => {
     if (typeof formattedContent === "string") {
@@ -444,10 +467,10 @@ const SolutionSection = ({
           </p>
         </div>
       ) : (
-        <div className="w-full relative">
+        <div className="w-full relative text-[13px]">
           <SyntaxHighlighter
-            showLineNumbers
-            language={displayLanguage}
+            showLineNumbers={true}
+            language={displayLanguage} 
             style={dracula}
             customStyle={{
               maxWidth: "100%",
@@ -455,22 +478,28 @@ const SolutionSection = ({
               padding: "1rem",
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
-              backgroundColor:
-                theme === "osrs" ? "rgba(0,0,0,0.8)" : "rgba(22, 27, 34, 0.5)",
-              fontSize: "0.8rem",
+              fontSize: "0.85rem",
               lineHeight: "1.5",
               borderRadius: "0.375rem",
+              // Ensure background is set correctly for theme
+              backgroundColor: theme === "osrs" ? "rgba(0,0,0,0.8)" : "#282a36", 
             }}
             wrapLongLines={true}
           >
             {formattedContent}
           </SyntaxHighlighter>
+
+          {/* Debugging Overlay: Remove this after verifying colors work */}
+          {/* <div className="absolute bottom-1 right-1 text-[9px] text-white/20 pointer-events-none">
+             Lang: {displayLanguage}
+          </div> */}
+
           <button
             onClick={copyToClipboard}
             className={
               theme === "osrs"
                 ? "absolute top-2 right-2 text-xs osrs-button px-2 py-1 transition z-10"
-                : "absolute top-2 right-2 text-xs text-white bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition z-10"
+                : "absolute top-2 right-2 text-xs text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white rounded px-2 py-1 transition z-10"
             }
             aria-label="Copy code to clipboard"
           >

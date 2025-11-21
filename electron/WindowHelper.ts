@@ -10,6 +10,7 @@ let isDev = false;
 
 export class WindowHelper {
   private mainWindow: BrowserWindow | null = null;
+  private fileWindow: BrowserWindow | null = null;
   private isWindowVisible: boolean = false;
   private windowPosition: { x: number; y: number } | null = null;
   private windowSize: { width: number; height: number } | null = null;
@@ -39,14 +40,12 @@ export class WindowHelper {
     const newWidth = Math.min(width + 32, maxAllowedWidth);
     const newHeight = Math.ceil(height);
 
-    // Allow negative Y positions so content can be scrolled by moving window up
-    // Only constrain X position to keep window partially visible horizontally
     const maxX = workArea.width - newWidth;
     const newX = Math.min(Math.max(currentX, 0), maxX);
 
     this.mainWindow.setBounds({
       x: newX,
-      y: currentY, // Don't constrain Y, allow negative values
+      y: currentY,
       width: newWidth,
       height: newHeight,
     });
@@ -92,12 +91,11 @@ export class WindowHelper {
       thickFrame: false,
       acceptFirstMouse: false,
       disableAutoHideCursor: true,
-      enableLargerThanScreen: true, // Important: allows window larger than screen
+      enableLargerThanScreen: true,
       opacity: 0.8,
     };
 
     this.mainWindow = new BrowserWindow(windowSettings);
-    // this.mainWindow.webContents.openDevTools({ mode: "detach" });
 
     this.mainWindow.setVisibleOnAllWorkspaces(true, {
       visibleOnFullScreen: true,
@@ -105,9 +103,7 @@ export class WindowHelper {
     this.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
     this.mainWindow.setContentProtection(true);
 
-    // Remove the CSS that disables scrollbars - we need them for navigation
     this.mainWindow.webContents.on("did-finish-load", () => {
-      // Only hide scrollbars visually, but keep scroll functionality
       const css = `
         *::-webkit-scrollbar { 
           width: 0px !important;
@@ -153,6 +149,74 @@ export class WindowHelper {
 
     this.setupWindowListeners();
     this.isWindowVisible = true;
+  }
+
+  // --- File Overlay Window - BIGGER SIZE ---
+  public createFileOverlayWindow(): BrowserWindow {
+    if (this.fileWindow && !this.fileWindow.isDestroyed()) {
+      return this.fileWindow;
+    }
+
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const workArea = primaryDisplay.workAreaSize;
+
+    // Calculate overlay size - even bigger
+    const overlayWidth = 800;
+    const overlayHeight = 900;
+
+    // Position opposite to main window
+    let overlayX = 50;
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      const mainBounds = this.mainWindow.getBounds();
+      if (mainBounds.x < workArea.width / 2) {
+        overlayX = workArea.width - overlayWidth - 50;
+      } else {
+        overlayX = 50;
+      }
+    }
+
+    // Center vertically
+    const overlayY = Math.floor((workArea.height - overlayHeight) / 2);
+
+    this.fileWindow = new BrowserWindow({
+      width: overlayWidth,
+      height: overlayHeight,
+      x: overlayX,
+      y: overlayY,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      focusable: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: isDev
+          ? path.join(__dirname, "../dist-electron/preload.js")
+          : path.join(__dirname, "preload.js"),
+        webSecurity: false,
+      }
+    });
+
+    this.fileWindow.setContentProtection(true);
+    this.fileWindow.setIgnoreMouseEvents(true, { forward: true });
+    this.fileWindow.setAlwaysOnTop(true, "screen-saver", 2);
+
+    const url = isDev
+      ? "http://localhost:5173?mode=overlay"
+      : `file://${path.join(__dirname, "..", "dist", "index.html")}?mode=overlay`;
+    
+    this.fileWindow.loadURL(url);
+
+    this.fileWindow.on("closed", () => {
+      this.fileWindow = null;
+    });
+
+    return this.fileWindow;
+  }
+
+  public getFileWindow(): BrowserWindow | null {
+    return this.fileWindow;
   }
 
   private applyStealthSettings(): void {
@@ -309,12 +373,9 @@ export class WindowHelper {
   public moveWindowDown(): void {
     if (!this.mainWindow) return;
 
-    const windowHeight = this.windowSize?.height || 0;
-
     this.currentX = Number(this.currentX) || 0;
     this.currentY = Number(this.currentY) || 0;
 
-    // Allow moving down, but keep at least 100px of the window visible at top
     const minVisibleHeight = 100;
     const maxY = this.screenHeight - minVisibleHeight;
 
@@ -334,7 +395,6 @@ export class WindowHelper {
     this.currentX = Number(this.currentX) || 0;
     this.currentY = Number(this.currentY) || 0;
 
-    // Allow moving up, but keep at least 100px of the window visible at bottom
     const minVisibleHeight = 100;
     const minY = -(windowHeight - minVisibleHeight);
 
@@ -346,9 +406,6 @@ export class WindowHelper {
     );
   }
 
-  /**
-   * Reset window position to center/top for better visibility
-   */
   public resetWindowPosition(): void {
     if (!this.mainWindow) return;
 
@@ -356,7 +413,6 @@ export class WindowHelper {
     const workArea = primaryDisplay.workAreaSize;
     const windowWidth = this.windowSize?.width || 400;
 
-    // Center horizontally, start at top
     this.currentX = Math.floor((workArea.width - windowWidth) / 2);
     this.currentY = 0;
 
@@ -366,18 +422,13 @@ export class WindowHelper {
     );
   }
 
-  /**
-   * Get suggested Y position to show specific content
-   */
   public scrollToShowContent(contentHeight: number): void {
     if (!this.mainWindow) return;
 
     const windowHeight = this.windowSize?.height || 600;
 
-    // If content is taller than window, allow negative Y to show bottom
     if (contentHeight > windowHeight) {
       const maxNegativeY = -(contentHeight - windowHeight);
-      // Position window to show middle of content
       this.currentY = Math.floor(maxNegativeY / 2);
 
       this.mainWindow.setPosition(

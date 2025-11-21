@@ -27,43 +27,40 @@ interface ElectronAPI {
   takeScreenshot: () => Promise<void>
   moveWindowLeft: () => Promise<void>
   moveWindowRight: () => Promise<void>
-  // REMOVED: analyzeAudioFromBase64, as it's replaced by the new pipeline
   analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>
   analyzeImageFile: (path: string) => Promise<void>
-  // ADDED: The new function for the full audio pipeline
   processAudio: (data: string, mimeType: string) => Promise<{ success: boolean; error?: string }>
   onToggleRecording: (callback: () => void) => () => void
   quitApp: () => Promise<void>
+  copyText: (text: string) => Promise<{ success: boolean }>
+  
+  // File Overlay API
+  selectFile: () => Promise<string | null>
+  openFileOverlay: (path: string) => Promise<{ success: boolean; error?: string }>
+  onFileOverlayData: (callback: (data: { type: 'image'|'text', content: string, name: string }) => void) => () => void
 }
 
 export const PROCESSING_EVENTS = {
-  //global states
   UNAUTHORIZED: "procesing-unauthorized",
   NO_SCREENSHOTS: "processing-no-screenshots",
-
-  //states for generating the initial solution
   INITIAL_START: "initial-start",
   PROBLEM_EXTRACTED: "problem-extracted",
   SOLUTION_SUCCESS: "solution-success",
   INITIAL_SOLUTION_ERROR: "solution-error",
-
-  //states for processing the debugging
   DEBUG_START: "debug-start",
   DEBUG_SUCCESS: "debug-success",
   DEBUG_ERROR: "debug-error"
 } as const
 
-// Expose the Electron API to the renderer process
 contextBridge.exposeInMainWorld("electronAPI", {
   updateContentDimensions: (dimensions: { width: number; height: number }) =>
     ipcRenderer.invoke("update-content-dimensions", dimensions),
   takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
   getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
-  copyText: (text : string) => ipcRenderer.invoke('copy-text', text),
+  copyText: (text: string) => ipcRenderer.invoke('copy-text', text),
   deleteScreenshot: (path: string) =>
     ipcRenderer.invoke("delete-screenshot", path),
 
-  // Event listeners
   onScreenshotTaken: (
     callback: (data: { path: string; preview: string }) => void
   ) => {
@@ -81,15 +78,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.removeListener("solutions-ready", subscription)
     }
   },
-
   onToggleRecording: (callback: () => void) => {
-    const subscription = () => callback();
-    ipcRenderer.on("toggle-recording", subscription);
+    const subscription = () => callback()
+    ipcRenderer.on("toggle-recording", subscription)
     return () => {
-      ipcRenderer.removeListener("toggle-recording", subscription);
-    };
+      ipcRenderer.removeListener("toggle-recording", subscription)
+    }
   },
-
   onResetView: (callback: () => void) => {
     const subscription = () => callback()
     ipcRenderer.on("reset-view", subscription)
@@ -112,11 +107,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     }
   },
   onDebugSuccess: (callback: (data: any) => void) => {
-    ipcRenderer.on("debug-success", (_event, data) => callback(data))
+    const subscription = (_: any, data: any) => callback(data)
+    ipcRenderer.on("debug-success", subscription)
     return () => {
-      ipcRenderer.removeListener("debug-success", (_event, data) =>
-        callback(data)
-      )
+      ipcRenderer.removeListener("debug-success", subscription)
     }
   },
   onDebugError: (callback: (error: string) => void) => {
@@ -172,10 +166,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
   moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
-  // REMOVED: The old ipcRenderer.invoke for "analyze-audio-base64"
   analyzeAudioFile: (path: string) => ipcRenderer.invoke("analyze-audio-file", path),
   analyzeImageFile: (path: string) => ipcRenderer.invoke("analyze-image-file", path),
-  // ADDED: The new ipcRenderer.invoke for "process-audio"
   processAudio: (data: string, mimeType: string) => ipcRenderer.invoke("process-audio", data, mimeType),
-  quitApp: () => ipcRenderer.invoke("quit-app")
+  quitApp: () => ipcRenderer.invoke("quit-app"),
+  
+  // File Overlay
+  selectFile: () => ipcRenderer.invoke("select-file"),
+  openFileOverlay: (path: string) => ipcRenderer.invoke("open-file-overlay", path),
+  onFileOverlayData: (callback: (data: any) => void) => {
+    const subscription = (_: any, data: any) => callback(data)
+    ipcRenderer.on("file-overlay-data", subscription)
+    return () => {
+      ipcRenderer.removeListener("file-overlay-data", subscription)
+    }
+  }
 } as ElectronAPI)
